@@ -8,6 +8,22 @@
 #include "exporter.h"
 #include "settings.h"
 
+#include <time.h>
+
+#define LINUX
+long long wall_clock_time()
+{
+#ifdef LINUX
+    struct timespec tp;
+    clock_gettime(CLOCK_REALTIME, &tp);
+    return (long long)(tp.tv_nsec + (long long)tp.tv_sec * 1000000000ll);
+#else
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (long long)(tv.tv_usec * 1000 + (long long)tv.tv_sec * 1000000000ll);
+#endif
+}
+
 // including the "dead faction": 0
 #define MAX_FACTIONS 10
 
@@ -143,6 +159,11 @@ int getNextState(const int *currWorld, const int *invaders, int nRows, int nCols
  */
 int goi(int nThreads, int nGenerations, const int *startWorld, int nRows, int nCols, int nInvasions, const int *invasionTimes, int **invasionPlans)
 {
+    //!CLOCK
+    long long before, after;
+    before = wall_clock_time();
+    //!!!!
+
     // death toll due to fighting
     int deathToll = 0;
 
@@ -242,5 +263,11 @@ int goi(int nThreads, int nGenerations, const int *startWorld, int nRows, int nC
     }
 
     free(world);
+
+    //!clock end
+    after = wall_clock_time();
+    fprintf(stderr, "Operation took %1.2f seconds\n", ((float)(after - before)) / 1000000000);
+    //!
+
     return deathToll;
 }

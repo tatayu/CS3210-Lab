@@ -170,11 +170,11 @@ int goi(int nThreads, int nGenerations, const int *startWorld, int nRows, int nC
     {
         omp_set_num_threads(nThreads);
     }
-    #pragma omp parallel
-    {
-        int thread_id = omp_get_thread_num();
-        printf("Thread %d ready\n", thread_id);
-    }
+    // #pragma omp parallel
+    // {
+    //     int thread_id = omp_get_thread_num();
+    //     printf("Thread %d ready\n", thread_id);
+    // }
     int row, col;
     //!!!!
 

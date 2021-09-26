@@ -153,20 +153,6 @@ int getNextState(const int *currWorld, const int *invaders, int nRows, int nCols
     }
 }
 
-// struct arg_struct {
-//     int nGenerations;
-//     int nInvasions;
-//     int nRows;
-//     int nCols;
-//     int tid;
-//     // const int *invasionTimes;
-//     // int *world;
-//     // int **invasionPlans;
-//     // int *g_upper;
-//     // int *g_lower;
-// };
-
-
 int **g_invasionPlans;
 int *g_upper, *g_lower;
 int *g_world;
@@ -177,22 +163,16 @@ int g_nRows;
 int g_nCols;
 int *g_inv;
 int *g_wholeNewWorld;
-// int g_tid;
 
-int deathToll = 0;
+int g_deathToll = 0;
 int invasionIndex = 0;
 pthread_barrier_t barrier;
 pthread_mutex_t deathTollMux;
 
 void* generation(void *threadid)
 {
-    // struct arg_struct *args = arguments;
-    printf("nG = %d, nI = %d, nR = %d, nC = %d tid = %d\n",g_nGenerations, g_nInvasions, g_nRows, g_nCols, *(int*)threadid);
     for (int i = 1; i <= g_nGenerations; i++)
     {
-        //int *inv = NULL;
-        //int *wholeNewWorld = malloc(sizeof(int) * g_nRows * g_nCols);
-        
         if(*(int*)threadid == 0) {
             // is there an invasion this generation?
             g_inv = NULL;
@@ -227,32 +207,31 @@ void* generation(void *threadid)
                 return (void* )-1;
             }
         }
+
         //!barrier
         pthread_barrier_wait(&barrier);
+        
         // get new states for each cell
         for (int row = g_lower[*(int*)threadid]; row < g_upper[*(int*)threadid]; row++)
         {
-            printf("lower=%d, upper=%d\n",g_lower[*(int*)threadid], g_upper[*(int*)threadid]);
             for (int col = 0; col < g_nCols; col++)
-            {
+            {   
                 bool diedDueToFighting;
                 int nextState = getNextState(g_world, g_inv, g_nRows, g_nCols, row, col, &diedDueToFighting);
-                printf("here\n");
                 setValueAt(g_wholeNewWorld, g_nRows, g_nCols, row, col, nextState);
                 if (diedDueToFighting)
                 {
-                    //!global
                     //!mux
                     pthread_mutex_lock(&deathTollMux);
-                    deathToll++;
+                    g_deathToll++;
                     pthread_mutex_unlock(&deathTollMux);
                 }
             }
         }
-        printf("here\n");
+        //!barrier
+        pthread_barrier_wait(&barrier);
         if(*(int*)threadid == 0)
         {
-            printf("here ng=%d\n",i);
             if (g_inv != NULL)
             {
                 free(g_inv);
@@ -262,8 +241,7 @@ void* generation(void *threadid)
             free(g_world);
             g_world = g_wholeNewWorld;
         }
-        //!barrier
-        pthread_barrier_wait(&barrier);
+
     }
 }
 
@@ -338,7 +316,6 @@ int goi(int nThreads, int nGenerations, const int *startWorld, int nRows, int nC
     }
 
     // Begin simulating
-    // struct arg_struct args;
     g_invasionPlans = malloc(sizeof(int *) * nInvasions);
     g_invasionTimes = malloc(sizeof(int) * nInvasions);
     g_invasionPlans = invasionPlans;
@@ -349,15 +326,6 @@ int goi(int nThreads, int nGenerations, const int *startWorld, int nRows, int nC
     g_nRows = nRows;
     g_nCols = nCols;
 
-    // args.nGenerations = nGenerations;
-    // args.nInvasions = nInvasions;
-    // args.nRows = nRows;
-    // args.nCols = nCols;
-    // args.invasionTimes = invasionTimes;
-    // args.world = world;
-    // args.invasionPlans = invasionPlans;
-    // args.g_upper = g_upper;
-    // args.g_lower = g_lower;
     int rc;
     int t_num;
     for (t_num = 0; t_num < threads_count; t_num++)
@@ -365,11 +333,16 @@ int goi(int nThreads, int nGenerations, const int *startWorld, int nRows, int nC
         int tid = t_num;
         threadid[tid] = tid;
 
-        rc = pthread_create(&threads[t_num], NULL, generation, (void*) &threadid[tid]);
+        rc = pthread_create(&threads[tid], NULL, generation, (void*) &threadid[tid]);
         if (rc) {
             printf("Error: Return code from pthread_create() is %d\n", rc);
             exit(-1);
         }
+    }
+
+    for (t_num = 0; t_num < threads_count; t_num++) 
+    {
+        pthread_join(threads[t_num], NULL);
     }
 
     free(g_world);
@@ -382,5 +355,5 @@ int goi(int nThreads, int nGenerations, const int *startWorld, int nRows, int nC
     fprintf(stderr, "Operation took %1.2f seconds\n", ((float)(after - before)) / 1000000000);
     //!
 
-    return deathToll;
+    return g_deathToll;
 }

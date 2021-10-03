@@ -4,13 +4,11 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <errno.h>
+#include <pthread.h>
+#include <math.h>
 #include "util.h"
 #include "exporter.h"
 #include "settings.h"
-#include <pthread.h>
-
-
-#include <time.h>
 
 #define LINUX
 long long wall_clock_time()
@@ -64,7 +62,6 @@ bool willFight(int n) {
  */
 int getNextState(const int *currWorld, const int *invaders, int nRows, int nCols, int row, int col, bool *diedDueToFighting)
 {
-
     // we'll explicitly set if it was death due to fighting
     *diedDueToFighting = false;
 
@@ -94,6 +91,7 @@ int getNextState(const int *currWorld, const int *invaders, int nRows, int nCols
             }
         }
     }
+
     // we counted this cell as its "neighbor"; adjust for this
     neighborCounts[cellFaction]--;
 
@@ -153,97 +151,67 @@ int getNextState(const int *currWorld, const int *invaders, int nRows, int nCols
     }
 }
 
-int **g_invasionPlans;
-int *g_upper, *g_lower;
-int *g_world;
-const int *g_invasionTimes;
-int g_nGenerations;
-int g_nInvasions;
-int g_nRows;
-int g_nCols;
-int *g_inv;
-int *g_wholeNewWorld;
-
-int g_deathToll = 0;
-int invasionIndex = 0;
-pthread_barrier_t barrier;
 pthread_mutex_t deathTollMux;
 
-void* generation(void *threadid)
+int g_nRows = 0;
+int g_nCols = 0;
+int *g_world;
+const int *g_startWorld;
+int *g_inv;
+int **g_invasionPlans;
+int g_invasionIndex = 0;
+int *g_wholeNewWorld;
+int g_deathToll = 0;
+int *g_upper, *g_lower;
+
+//!functions!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+void* copyWorld(void* threadid)
 {
-    for (int i = 1; i <= g_nGenerations; i++)
+    for (int row = g_lower[*(int*)threadid]; row < g_upper[*(int*)threadid]; row++)
     {
-        if(*(int*)threadid == 0) {
-            // is there an invasion this generation?
-            g_inv = NULL;
-            if (invasionIndex < g_nInvasions && i == g_invasionTimes[invasionIndex])
-            {
-                // we make a copy because we do not own invasionPlans
-                g_inv = malloc(sizeof(int) * g_nRows * g_nCols);
-                if (g_inv == NULL)
-                {
-                    free(g_world);
-                    return (void* )-1;
-                }
-                for (int row = 0; row < g_nRows; row++)
-                {
-                    for (int col = 0; col < g_nCols; col++)
-                    {
-                        setValueAt(g_inv, g_nRows, g_nCols, row, col, getValueAt(g_invasionPlans[invasionIndex], g_nRows, g_nCols, row, col));
-                    }
-                }
-                invasionIndex++;
-            }
-
-            // create the next world state
-            g_wholeNewWorld = malloc(sizeof(int) * g_nRows * g_nCols);
-            if (g_wholeNewWorld == NULL)
-            {
-                if (g_inv != NULL)
-                {
-                    free(g_inv);
-                }
-                free(g_world);
-                return (void* )-1;
-            }
-        }
-
-        //!barrier
-        pthread_barrier_wait(&barrier);
-        
-        // get new states for each cell
-        for (int row = g_lower[*(int*)threadid]; row < g_upper[*(int*)threadid]; row++)
+        //printf("copyWorld: thread id value is %d, row number is %d\n", *(int*)threadid, row);
+        for (int col = 0; col < g_nCols; col++)
         {
-            for (int col = 0; col < g_nCols; col++)
-            {   
-                bool diedDueToFighting;
-                int nextState = getNextState(g_world, g_inv, g_nRows, g_nCols, row, col, &diedDueToFighting);
-                setValueAt(g_wholeNewWorld, g_nRows, g_nCols, row, col, nextState);
-                if (diedDueToFighting)
-                {
-                    //!mux
-                    pthread_mutex_lock(&deathTollMux);
-                    g_deathToll++;
-                    pthread_mutex_unlock(&deathTollMux);
-                }
-            }
+            setValueAt(g_world, g_nRows, g_nCols, row, col, getValueAt(g_startWorld, g_nRows, g_nCols, row, col));
         }
-        //!barrier
-        pthread_barrier_wait(&barrier);
-        if(*(int*)threadid == 0)
-        {
-            if (g_inv != NULL)
-            {
-                free(g_inv);
-            }
-
-            // swap worlds
-            free(g_world);
-            g_world = g_wholeNewWorld;
-        }
-
     }
 }
+
+void* copyInvasionWorld(void* threadid)
+{
+    for (int row = g_lower[*(int*)threadid]; row < g_upper[*(int*)threadid]; row++)
+    {
+        //printf("copyInvasionWorld: thread id value is %d, row number is %d\n", *(int*)threadid, row);
+        for (int col = 0; col < g_nCols; col++)
+        {
+            setValueAt(g_inv, g_nRows, g_nCols, row, col, getValueAt(g_invasionPlans[g_invasionIndex], g_nRows, g_nCols, row, col));
+        }
+    }
+}
+
+
+void* getNewState(void* threadid)
+{
+    for (int row = g_lower[*(int*)threadid]; row < g_upper[*(int*)threadid]; row++)
+    {
+        //printf("getNewState: thread id value is %d, row number is %d\n", *(int*)threadid, row);
+        for (int col = 0; col < g_nCols; col++)
+        {
+            bool diedDueToFighting;
+            int nextState = getNextState(g_world, g_inv, g_nRows, g_nCols, row, col, &diedDueToFighting);
+            setValueAt(g_wholeNewWorld, g_nRows, g_nCols, row, col, nextState);
+            if (diedDueToFighting)
+            {
+                //!mux
+                pthread_mutex_lock(&deathTollMux);
+                g_deathToll++;
+                pthread_mutex_unlock(&deathTollMux);
+            }
+        }
+    }
+}
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
 /**
  * The main simulation logic.
@@ -258,6 +226,7 @@ int goi(int nThreads, int nGenerations, const int *startWorld, int nRows, int nC
     before = wall_clock_time();
     //!!!!
     int threads_count;
+    int rows;
 
     if(nRows < nThreads)
     {
@@ -268,16 +237,26 @@ int goi(int nThreads, int nGenerations, const int *startWorld, int nRows, int nC
         threads_count = nThreads;
     }
 
-    //pthread
     pthread_t threads[threads_count];
+
+    g_nRows = nRows;
+    g_nCols = nCols;
+    g_startWorld = startWorld;
+    g_invasionPlans = invasionPlans;
+    
     int threadid[threads_count];
 
-    //barrier
-    pthread_barrier_init (&barrier, NULL, threads_count);
+    // init the world!
+    // we make a copy because we do not own startWorld (and will perform free() on world)
+    g_world = malloc(sizeof(int) * nRows * nCols);
+    if (g_world == NULL)
+    {
+        return -1;
+    }
 
+    //! distribute tasks to threads 
     g_lower = malloc(sizeof(int) * threads_count);
     g_upper = malloc(sizeof(int) * threads_count);
-
     int average = nRows/threads_count;
     if(nRows % threads_count != 0)
     {
@@ -297,56 +276,124 @@ int goi(int nThreads, int nGenerations, const int *startWorld, int nRows, int nC
         g_lower[i] = g_upper[i - 1];
         g_upper[i] = g_lower[i] + average - 1;
     }
-    // death toll due to fighting
-    //int deathToll = 0;
-
-    // init the world!
-    // we make a copy because we do not own startWorld (and will perform free() on world)
-    g_world = malloc(sizeof(int) * nRows * nCols);
-    if (g_world == NULL)
-    {
-        return -1;
-    }
-    for (int row = 0; row < nRows; row++)
-    {
-        for (int col = 0; col < nCols; col++)
-        {
-            setValueAt(g_world, nRows, nCols, row, col, getValueAt(startWorld, nRows, nCols, row, col));
-        }
-    }
-
-    // Begin simulating
-    g_invasionPlans = malloc(sizeof(int *) * nInvasions);
-    g_invasionTimes = malloc(sizeof(int) * nInvasions);
-    g_invasionPlans = invasionPlans;
-    // g_world = world;
-    g_invasionTimes = invasionTimes;
-    g_nGenerations = nGenerations;
-    g_nInvasions = nInvasions;
-    g_nRows = nRows;
-    g_nCols = nCols;
-
+    
+    //! parallel copyWorld
     int rc;
     int t_num;
     for (t_num = 0; t_num < threads_count; t_num++)
     {
         int tid = t_num;
         threadid[tid] = tid;
-
-        rc = pthread_create(&threads[tid], NULL, generation, (void*) &threadid[tid]);
+        rc = pthread_create(&threads[tid], NULL, copyWorld, (void*) &threadid[tid]);
         if (rc) {
             printf("Error: Return code from pthread_create() is %d\n", rc);
             exit(-1);
         }
     }
 
+    //wait for all thread to be back
     for (t_num = 0; t_num < threads_count; t_num++) 
     {
         pthread_join(threads[t_num], NULL);
     }
 
+
+#if PRINT_GENERATIONS
+    printf("\n=== WORLD 0 ===\n");
+    printWorld(g_world, nRows, nCols);
+#endif
+
+#if EXPORT_GENERATIONS
+    exportWorld(g_world, nRows, nCols);
+#endif
+
+    // Begin simulating
+    for (int i = 1; i <= nGenerations; i++)
+    {
+        // is there an invasion this generation?
+        g_inv = NULL;
+        if (g_invasionIndex < nInvasions && i == invasionTimes[g_invasionIndex])
+        {
+            // we make a copy because we do not own invasionPlans
+            g_inv = malloc(sizeof(int) * nRows * nCols);
+            if (g_inv == NULL)
+            {
+                free(g_world);
+                return -1;
+            }
+
+            //! Parallel copyinv
+            for (t_num = 0; t_num < threads_count; t_num++)
+            {
+                int tid = t_num;
+                threadid[tid] = tid;
+                rc = pthread_create(&threads[t_num], NULL, copyInvasionWorld, (void*) &threadid[tid]);
+                if (rc) {
+                    printf("Error: Return code from pthread_create() is %d\n", rc);
+                    exit(-1);
+                }
+            }
+
+            for (t_num = 0; t_num < threads_count; t_num++) 
+            {
+                pthread_join(threads[t_num], NULL);
+            }
+            g_invasionIndex++;
+        }
+
+        // create the next world state
+        g_wholeNewWorld = malloc(sizeof(int) * nRows * nCols);
+        if (g_wholeNewWorld == NULL)
+        {
+            if (g_inv != NULL)
+            {
+                free(g_inv);
+            }
+            free(g_world);
+            return -1;
+        }
+
+        // get new states for each cell
+        //! parallel get new state
+        for (t_num = 0; t_num < threads_count; t_num++)
+        {
+            int tid = t_num;
+            threadid[tid] = tid;
+            rc = pthread_create(&threads[t_num], NULL, getNewState, (void*) &threadid[tid]);
+            if (rc) {
+                printf("Error: Return code from pthread_create() is %d\n", rc);
+                exit(-1);
+            }
+        }
+
+        for (t_num = 0; t_num < threads_count; t_num++) 
+        {
+            pthread_join(threads[t_num], NULL);
+        }
+
+        if (g_inv != NULL)
+        {
+            free(g_inv);
+        }
+
+        // swap worlds
+        free(g_world);
+        g_world = g_wholeNewWorld;
+
+#if PRINT_GENERATIONS
+        printf("\n=== WORLD %d ===\n", i);
+        printWorld(world, nRows, nCols);
+#endif
+
+#if EXPORT_GENERATIONS
+        exportWorld(world, nRows, nCols);
+#endif
+    }
+
     free(g_world);
-    
+    free(g_lower);
+    free(g_upper);
+
     //!clean up
     pthread_mutex_destroy(&deathTollMux);
 

@@ -5,7 +5,8 @@ echo "RUNNING TEST CASES..."
 
 echo "RUNNING THREAD IMPLEMENTATION..."
 
-for filename in test_cases/*.in; do
+cd ..
+for filename in testcases/*.in; do
     echo "RUNNING $filename"
     for ((counter = 0; counter < 3; counter ++)) do
         echo "run $counter"

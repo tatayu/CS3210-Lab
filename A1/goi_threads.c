@@ -225,7 +225,6 @@ int goi(int nThreads, int nGenerations, const int *startWorld, int nRows, int nC
     long long before, after;
     before = wall_clock_time();
     //!!!!
-
     int threads_count;
     int rows;
 

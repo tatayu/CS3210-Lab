@@ -5,11 +5,14 @@ echo "RUNNING TEST CASES..."
 
 echo "RUNNING OMP IMPLEMENTATION..."
 
+cd ..
 for filename in testcases/*.in; do
     echo "RUNNING $filename"
     for ((counter = 0; counter < 3; counter ++)) do
         echo "run $counter"
-        ./goi_omp.out "$filename" deathToll.out $1
+        ./goi_omp "$filename" deathToll.out $1
+        var="$(cat deathToll.out)"
+        echo "output value for $filename is $var"
     done
 done
 

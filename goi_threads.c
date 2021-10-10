@@ -345,10 +345,15 @@ int goi(int nThreads, int nGenerations, const int *startWorld, int nRows, int nC
         pthread_join(threads[t_num], NULL);
     }
 
-    free(g_world);
-    
     //!clean up
+    free(g_world);
+    free(g_invasionPlans);
+    free((char*)g_invasionTimes);
+    free(g_upper);
+    free(g_lower);
+    
     pthread_mutex_destroy(&deathTollMux);
+    pthread_barrier_destroy(&barrier);
 
     //!clock end
     after = wall_clock_time();

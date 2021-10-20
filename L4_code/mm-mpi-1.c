@@ -134,7 +134,7 @@ void slave_receive_data(matrix* b, matrix *a)
 
    	
     before = wall_clock_time();
-    allocate_matrix (a, rows_per_slave, size); 
+    allocate_matrix (a, rows_per_slave*2, size); 
 
 	// Getting a few rows of matrix A from the master
 	for (i = 0; i < rows_per_slave; i++)
@@ -147,7 +147,7 @@ void slave_receive_data(matrix* b, matrix *a)
 	for (i = 0; i < rows_per_slave; i++)
 	{
 		row_id = myid * rows_per_slave + rows_per_slave*slaves + i;
-		MPI_Recv(a->element[i], size, MPI_FLOAT, MASTER_ID, row_id, MPI_COMM_WORLD, &status);
+		MPI_Recv(a->element[row_id], size, MPI_FLOAT, MASTER_ID, row_id, MPI_COMM_WORLD, &status);
 	}
 	fprintf(stderr," --- SLAVE %d: Received row [%d-%d] of matrix A\n", myid, myid*rows_per_slave + rows_per_slave*slaves, row_id);
 	
@@ -185,7 +185,7 @@ void slave_compute(matrix b, matrix a, matrix *result)
 	long long before, after;
 
 	before = wall_clock_time();
-    allocate_matrix (result, rows_per_slave, size); 
+    allocate_matrix (result, rows_per_slave*2, size); 
 
 	for (i = 0; i < rows_per_slave; i++)
 	{
@@ -203,11 +203,11 @@ void slave_compute(matrix b, matrix a, matrix *result)
 	{
 		for(j = 0; j < size; j ++)
 		{
-			result->element[myid*rows_per_slave + rows_per_slave*slaves + i][j];
-			for(k = 0; k < size; k ++)
-			{
-				result->element[myid*rows_per_slave + rows_per_slave*slaves][j] += a.element[myid*rows_per_slave + rows_per_slave*slaves][k] * b.element[k][j];
-			}
+			result->element[myid*rows_per_slave + rows_per_slave*slaves + i][j] = 0;
+			//for(k = 0; k < size; k ++)
+			//{
+			//	result->element[myid*rows_per_slave + rows_per_slave*slaves + i][j] += a.element[myid*rows_per_slave + rows_per_slave*slaves + i][k] * b.element[k][j];
+			//}
 		}
 	}
 

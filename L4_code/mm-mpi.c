@@ -136,12 +136,12 @@ void slave_receive_data(matrix* b, matrix *a)
 
    	
     before = wall_clock_time();
-    allocate_matrix (a, rows_per_slave, size); 
+    allocate_matrix (a, rows_per_slave * NUM_OF_BLOCKS, size); 
 
 	// Getting a few rows of matrix A from the master
-	for(cycle = 0; cycle < NUM_OF_BLOCKS; cycle++)
+	for(int cycle = 0; cycle < NUM_OF_BLOCKS; cycle++)
 	{
-		for (i = 0; i < rows_per_slave * NUM_OF_BLOCKS; i++)
+		for (i = 0; i < rows_per_slave; i++)
 		{
 			row_id = myid * rows_per_slave + cycle * rows_per_slave * slaves + i;
 			MPI_Recv(a->element[i + cycle * rows_per_slave], size, MPI_FLOAT, MASTER_ID, row_id, MPI_COMM_WORLD, &status);
@@ -184,17 +184,17 @@ void slave_compute(matrix b, matrix a, matrix *result)
 	before = wall_clock_time();
     	allocate_matrix (result, rows_per_slave, size); 
 
-		for (i = 0; i < rows_per_slave; i++)
+	for (i = 0; i < rows_per_slave; i++)
+	{
+		for ( j = 0; j < size; j++)
 		{
-			for ( j = 0; j < size; j++)
+			result->element[i][j] = 0;
+			for (k = 0; k < size; k++)
 			{
-				result->element[i][j] = 0;
-				for (k = 0; k < size; k++)
-				{
-					result->element[i][j] += a.element[i][k] * b.element[k][j];
-				}
+				result->element[i][j] += a.element[i][k] * b.element[k][j];
 			}
 		}
+	}
 
 	after = wall_clock_time();
 	comp_time += after - before;
@@ -209,16 +209,17 @@ void slave_compute(matrix b, matrix a, matrix *result)
 void slave_send_result(matrix result)
 {
 	int i;
-	int rows_per_slave = size / slaves / NUM_OF_BLOCKS ;
+	int rows_per_slave = size / slaves / NUM_OF_BLOCKS;
 	long long before, after;
 
 	before = wall_clock_time();
-	for(cycle = 0; cycle < NUM_OF_BLOCKS; cycle++)
+	for(int cycle = 0; cycle < NUM_OF_BLOCKS; cycle++)
 	{
 		for (i = 0; i < rows_per_slave; i++)
 		{
 			int row_id = myid * rows_per_slave + cycle * rows_per_slave * slaves + i;
-			MPI_Send(result.element[i + cycle * slaves * rows_per_slave], size, MPI_FLOAT, MASTER_ID, row_id, MPI_COMM_WORLD);
+		//	fprintf(stderr,"sending from ID: %d with row_id %d\n",myid, row_id);
+			MPI_Send(result.element[i + cycle * rows_per_slave], size, MPI_FLOAT, MASTER_ID, row_id, MPI_COMM_WORLD);
 		}
 	}
 	after = wall_clock_time();
@@ -274,7 +275,8 @@ void master_distribute(matrix a, matrix b)
 
 	fprintf(stderr," +++ MASTER : Distributing matrix A to slaves: slaves %d, rows_per_slave %d \n", slaves, rows_per_slave);
 	// Send the rows to each process
-	for (int cycle = 0; cycle < NUM_OF_BLOCKS, cycle++) {
+	for (int cycle = 0; cycle < NUM_OF_BLOCKS; cycle++) 
+	{
 		for (slave_id = 0; slave_id < slaves; slave_id++)
 		{	
 			row_start = slave_id * rows_per_slave + cycle * rows_per_slave * slaves;
@@ -328,13 +330,14 @@ void master_receive_result(matrix result)
 	// Matrix a is distributed part by part
 	int rows_per_slave = size / slaves / NUM_OF_BLOCKS;	
 	// Get the results
-	for (int cycle = 0; cycle < NUM_OF_BLOCKS, cycle++) {
+	for (int cycle = 0; cycle < NUM_OF_BLOCKS; cycle++) {
 		for (slave_id = 0; slave_id < slaves ; slave_id++)
 		{	
 			for (i = 0; i < rows_per_slave; i++)
 			{
 				int row_id = slave_id * rows_per_slave + cycle * rows_per_slave * slaves + i;
 				float buffer[size];
+				//fprintf(stderr,"waiting for row_id: %d\n", row_id);
 				MPI_Recv(buffer, size, MPI_FLOAT, slave_id, row_id, MPI_COMM_WORLD, &status);
 				for (j = 0; j < size; j++)
 					result.element[row_id][j] = buffer[j];

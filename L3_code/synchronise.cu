@@ -91,7 +91,7 @@ int main(int argc, char **argv)
     is_done = 0;
     counter = 0;
 
-    with_sync<<<1, 1024>>>();
+    with_sync<<<1, 1>>>();
     cudaDeviceSynchronize();
     check_cuda_errors();
 

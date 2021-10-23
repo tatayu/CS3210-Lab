@@ -5,9 +5,9 @@ echo "RUNNING TEST CASES..."
 
 echo "RUNNING OMP IMPLEMENTATION..."
 
-for filename in sample_inputs/*.in; do
+for filename in testcases/*.in; do
     echo "RUNNING $filename"
-    for ((counter = 0; counter < 3; counter ++)) do
+    for ((counter = 0; counter < 1; counter ++)) do
         echo "run $counter"
         ./goi_cuda "$filename" deathToll.out $1 $2 $3 $4 $5 $6
     done

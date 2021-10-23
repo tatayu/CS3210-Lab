@@ -5,7 +5,6 @@
 #include <ctype.h>
 #include <errno.h>
 #include "util.h"
-#include "exporter.h"
 #include "settings.h"
 
 #include <omp.h>

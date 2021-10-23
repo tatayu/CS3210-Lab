@@ -244,10 +244,12 @@ int goi(int gridX, int gridY, int gridZ, int blockX, int blockY, int blockZ, int
 {
     //!CLOCK
     long long before, after;
+    int *gpu_world = NULL;
+    cudaError_t rc;
+
     before = wall_clock_time();
     //!!!!
     // death toll due to fighting
-    //int deathToll = 0; //!!!!change to global
     deathToll = 0;
     
     int nThread = gridX * gridY * gridZ * blockX * blockY * blockZ;
@@ -256,26 +258,18 @@ int goi(int gridX, int gridY, int gridZ, int blockX, int blockY, int blockZ, int
     dim3 dimGrd(gridX, gridY, gridZ);
     dim3 dimBlk(blockX, blockY, blockZ);
     
-    // init the world!
-    // we make a copy because we do not own startWorld (and will perform free() on world)
-    //int *world = malloc(sizeof(int) * nRows * nCols); 
-    
-    //!!!cudaMalloc
-    int *world = NULL;
-    cudaMallocManaged((void **)&world, sizeof(int) * nRows * nCols);
-    if (world == NULL)
+    cudaMalloc((void **)&gpu_world, sizeof(int) * nRows * nCols);
+    rc = cudaMemcpy(gpu_world, startWorld, sizeof(int) * nRows * nCols, cudaMemcpyHostToDevice);
+    if (rc != cudaSuccess)
     {
-        cudaFree(world);
-        return -1;
+        printf("Could not copy to device for world. Reason: %s\n", cudaGetErrorString(rc));
     }
-    //!!!
 
-    for (int row = 0; row < nRows; row++)
+    if (gpu_world == NULL)
     {
-        for (int col = 0; col < nCols; col++)
-        {
-            setValueAt(world, nRows, nCols, row, col, getValueAt(startWorld, nRows, nCols, row, col));
-        }
+        //free(world);
+        cudaFree(gpu_world);
+        return -1;
     }
    
     // Begin simulating
@@ -283,69 +277,57 @@ int goi(int gridX, int gridY, int gridZ, int blockX, int blockY, int blockZ, int
     for (int i = 1; i <= nGenerations; i++)
     {
         // is there an invasion this generation?
-        int *inv = NULL;
+        int *gpu_inv = NULL;
         if (invasionIndex < nInvasions && i == invasionTimes[invasionIndex])
         {
             // we make a copy because we do not own invasionPlans
-            //inv = malloc(sizeof(int) * nRows * nCols);
-            //!cudaMalloc
-            cudaMallocManaged((void **)&inv, sizeof(int) * nRows * nCols);
-            if (inv == NULL)
+            cudaMalloc((void **)&gpu_inv, sizeof(int) * nRows * nCols);
+            rc = cudaMemcpy(gpu_inv, invasionPlans[invasionIndex], sizeof(int) * nRows * nCols, cudaMemcpyHostToDevice);
+            if (rc != cudaSuccess)
             {
-                cudaFree(inv);
-                return -1;
+                printf("Could not copy to device for world. Reason: %s\n", cudaGetErrorString(rc));
             }
-            //!!!
-            
-            for (int row = 0; row < nRows; row++)
+
+            if (gpu_inv == NULL)
             {
-                for (int col = 0; col < nCols; col++)
-                {
-                    setValueAt(inv, nRows, nCols, row, col, getValueAt(invasionPlans[invasionIndex], nRows, nCols, row, col));
-                }
+                cudaFree(gpu_inv);
+                return -1;
             }
             invasionIndex++;
         }
+        
+        //************************************************CUDA CODE************************************************
+        int *gpu_wholeNewWorld = NULL;
+        cudaMalloc((void **)&gpu_wholeNewWorld, sizeof(int) * nRows * nCols);
 
-        // create the next world state
-        //int *wholeNewWorld = malloc(sizeof(int) * nRows * nCols); 
-        //!!!cudaMalloc
-        int *wholeNewWorld = NULL;
-        cudaMallocManaged((void **)&wholeNewWorld, sizeof(int) * nRows * nCols);
-
-        if (wholeNewWorld == NULL)
+        if (gpu_wholeNewWorld == NULL)
         {
-            if (inv != NULL)
+            if (gpu_inv != NULL)
             {
-                cudaFree(inv);
+                cudaFree(gpu_inv);
             }
-            cudaFree(world);
+            //free(world);
+            cudaFree(gpu_world);
             return -1;
         }
-        //!!!!
-
-        //************************************************CUDA CODE************************************************
-        //TODO: call kernel
-        updateState<<<dimGrd, dimBlk>>>(nRows, nCols, world, inv, wholeNewWorld, nTask, nThread);
+        updateState<<<dimGrd, dimBlk>>>(nRows, nCols, gpu_world, gpu_inv, gpu_wholeNewWorld, nTask, nThread);
         check_cuda_errors();
         cudaDeviceSynchronize();
-        //printf("counter: %d\n", counter);
-
         //*********************************************************************************************************
 
-        if (inv != NULL)
+        if (gpu_inv != NULL)
         {
-            cudaFree(inv);
+            cudaFree(gpu_inv);
         }
 
         // swap worlds
-        cudaFree(world);
-        world = wholeNewWorld;
+        cudaFree(gpu_world);
+        gpu_world = gpu_wholeNewWorld;
 
     }
 
-    //printf("counter: %d\n", counter);
-    cudaFree(world);
+    //free(world);
+    cudaFree(gpu_world);
 
     //!clock end
     after = wall_clock_time();

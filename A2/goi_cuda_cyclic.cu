@@ -206,17 +206,11 @@ __global__ void updateState(int nRows, int nCols, int *world, int *inv, int *who
     //TODO: WORK DISTRIBUTION change row and col
     if(tid < nTask)
     {
-        //printf("tid: %d, nTask: %d, nThread: %d\n", tid, nTask, nThread);
-        //printf("nRow: %d, nCol: %d\n", nRows, nCols);
-        //printf("tid:%d\n", tid);
         for(int  i= tid; i < nTask; i += nThread)
         {
             
             int row = i / nCols;
             int col = i % nCols;  
-            //printf("i: %d ", i);
-            //printf("row: %d, col: %d\n", row, col);
-            //printf("here 2\n");
             bool diedDueToFighting;
             int nextState = getNextState(world, inv, nRows, nCols, row, col, &diedDueToFighting); //read row * col
             setValueAt(wholeNewWorld, nRows, nCols, row, col, nextState); //write row * col
@@ -271,6 +265,17 @@ int goi(int gridX, int gridY, int gridZ, int blockX, int blockY, int blockZ, int
         cudaFree(gpu_world);
         return -1;
     }
+
+    int *gpu_wholeNewWorld = NULL;
+    cudaMalloc((void **)&gpu_wholeNewWorld, sizeof(int) * nRows * nCols);
+    if (gpu_wholeNewWorld == NULL)
+    {
+        cudaFree(gpu_world);
+        return -1;
+    }
+
+    int *temp = NULL;
+    cudaMalloc((void **)&temp, sizeof(int) * nRows * nCols);
    
     // Begin simulating
     int invasionIndex = 0;
@@ -297,19 +302,8 @@ int goi(int gridX, int gridY, int gridZ, int blockX, int blockY, int blockZ, int
         }
         
         //************************************************CUDA CODE************************************************
-        int *gpu_wholeNewWorld = NULL;
-        cudaMalloc((void **)&gpu_wholeNewWorld, sizeof(int) * nRows * nCols);
-
-        if (gpu_wholeNewWorld == NULL)
-        {
-            if (gpu_inv != NULL)
-            {
-                cudaFree(gpu_inv);
-            }
-            //free(world);
-            cudaFree(gpu_world);
-            return -1;
-        }
+        //int *gpu_wholeNewWorld = NULL;
+        //cudaMalloc((void **)&gpu_wholeNewWorld, sizeof(int) * nRows * nCols);
         updateState<<<dimGrd, dimBlk>>>(nRows, nCols, gpu_world, gpu_inv, gpu_wholeNewWorld, nTask, nThread);
         check_cuda_errors();
         cudaDeviceSynchronize();
@@ -321,13 +315,15 @@ int goi(int gridX, int gridY, int gridZ, int blockX, int blockY, int blockZ, int
         }
 
         // swap worlds
-        cudaFree(gpu_world);
+        temp = gpu_world;
         gpu_world = gpu_wholeNewWorld;
-
+        gpu_wholeNewWorld = temp;
     }
 
     //free(world);
+    cudaFree(temp);
     cudaFree(gpu_world);
+    cudaFree(gpu_wholeNewWorld);
 
     //!clock end
     after = wall_clock_time();

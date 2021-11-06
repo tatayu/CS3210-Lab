@@ -4,6 +4,8 @@ echo "Checking zip file...."
 
 if [ "$#" -ne 1 ]; then
     echo "You should provide your zip file as a parameter and nothing else!"
+    echo "Usage: ./check_zip.sh [zip_file]"
+    echo "Example Usage: ./check_zip.sh ./A0123456X.zip"
     exit 1
 fi
 
@@ -16,7 +18,7 @@ fi
 
 echo "Unzipping file: $1"
 if [ ! -f $1 ]; then
-    echo "File $1 does not exist."
+    echo "Zip file $1 does not exist."
     exit 1
 fi
 
@@ -42,7 +44,8 @@ fi
 
 # Check for files and directories
 directories=(testcases)
-files=("goi_cuda.cu" "Makefile")
+files=("main.c" "Makefile")
+files_to_be_replaced=("tasks.c" "tasks.h" "hostfile")
 for dir in "${directories[@]}"; do
     if [ ! -d $dir ]
     then
@@ -59,7 +62,27 @@ for file in "${files[@]}"; do
     fi
 done
 
+for file in "${files_to_be_replaced[@]}"; do
+    if [ -f $file ]
+    then
+        echo "Failed - $file detected in submission zip file."
+        echo "-------- $file file will be replaced during grading."
+        echo "-------- Please remove this file and make sure that your "
+        echo "-------- submission does not depend on changes you made in $file."
+        exit 1
+    fi
+done
+
+# Download sample input file to check whether executables can be compiled and run
+INPUT_FILE_ID="1P5KT471itpkR46JiWatSSBOqGkhU_oxY"
+INPUT_FILE_NAME="check_zip_a03_files.zip"
+# Download cookie
+curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${INPUT_FILE_ID}" &> /dev/null
+# Download sample input file
+curl -Lb ./cookie "https://drive.google.com/uc?export=download&confirm=`awk '/download/ {print $NF}' ./cookie`&id=${INPUT_FILE_ID}" -o ${INPUT_FILE_NAME} &> /dev/null
+
 # Check that project can compile
+unzip -d . ${INPUT_FILE_NAME} &>/dev/null
 make build &> /dev/null
 if [ $? -ne 0 ]
 then 
@@ -67,26 +90,20 @@ then
     exit 1
 fi
 
-# Check that compiled file is called `goi_cuda`
-if [ ! -f "goi_cuda" ]
+# Check that compiled file is called `a03`
+if [ ! -f "a03" ]
 then
-    echo "Failed - the executable should be named `goi_cuda`"
+    echo "Failed - the executable should be named `a03`"
+    echo "-------- A common mistake is to name it `a03.out.`"
+    echo "-------- If that's the issue: there should be no `.out` suffix"
     exit 1
 fi
 
-# Download sample input file to check whether executables can run
-INPUT_FILE_ID="1Rs9U47R4kY_DBqUea5mNUV6czF3IBjXj"
-INPUT_FILE_NAME="check_zip_test_input.in"
-# Download cookie
-curl -c ./cookie -s -L "https://drive.google.com/uc?export=download&id=${INPUT_FILE_ID}" &> /dev/null
-# Download sample input file
-curl -Lb ./cookie "https://drive.google.com/uc?export=download&confirm=`awk '/download/ {print $NF}' ./cookie`&id=${INPUT_FILE_ID}" -o ${INPUT_FILE_NAME} &> /dev/null
-
-# Check that `goi_cuda` can run`
-./goi_cuda ./${INPUT_FILE_NAME} test_cuda.out 1 1 1 1 1 32 &> /dev/null
+# Check that `a03` can run`
+mpirun -n 3 -hostfile hostfile ./a03 gdrive_sample_input_files 1 1 1 temp.out 1
 if [ $? -ne 0 ]
 then 
-    echo "Failed - `goi_cuda` executable cannot run"
+    echo "Failed - `a03` executable cannot run"
     exit 1
 fi
 

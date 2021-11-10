@@ -48,7 +48,7 @@ char *get_file_content(char *input_files_dir, int i)
 }
 
 
-void master(char *input_files_dir, int num_files, int num_reduce_workers)
+void master(char *input_files_dir, int num_files, int num_map_workers)
 {
     //int reduce_worker_id = num_map_workers + 1;
     for(int i = 0; i < num_files; i ++)
@@ -74,6 +74,17 @@ void master(char *input_files_dir, int num_files, int num_reduce_workers)
             }
         }
     }
+
+    
+    //TODO: Gather results from all reduce using MPI_Gather????
+    KeyValue *final_result = (KeyValue *)malloc(1000 * sizeof(KeyValue));
+    MPI_Gather(?, ?, ?, final_result)
+    
+    //write to output file
+    FILE *write;
+    write =fopen("result.output", "w");
+    fputs(final_result, write);
+    fclose(write);
 }
 
 
@@ -119,7 +130,7 @@ MPI_Type_commit(&mpi_partition_type);
 
 void map_worker(MapTaskOutput* (*map) (char*) ,int rank, MPI_Status Stat, int num_reduce_workers)
 {
-   //todo map
+    
     storePartition *part= (storePartition *)malloc(num_reduce_workers * sizeof(storePartition));
     for(int i = 0; i < num_reduce_workers; i ++)
     {
@@ -128,7 +139,8 @@ void map_worker(MapTaskOutput* (*map) (char*) ,int rank, MPI_Status Stat, int nu
         part[i].pair = (storePair *)malloc(1000 * sizeof(storePair));
     }
 
-    while(1)
+    //TODO: need to change condition or receive a notification from master saying no more file to process?????
+    while(1) 
     {
         char *file_content = (char*)malloc(MAX);
         MPI_Recv(file_content, MAX, MPI_CHAR, 0, 0, MPI_COMM_WORLD, Stat);
@@ -148,14 +160,14 @@ void map_worker(MapTaskOutput* (*map) (char*) ,int rank, MPI_Status Stat, int nu
     }
 
     //after collecting the partition from all the files processed by this worker, sent each partition to corresponding reduce worker
-    for(int i = 0; i < num_reduce_workers;i++)
+    for(int i = 0; i < num_reduce_workers; i++)
     {
         MPI_Send(output, sizeof(part[i]), mpi_partition_type, rank, 0, MPI_COMM_WORLD);
     }
 }
 
 
-void reduce_worker(int rank, int num_reduce_workers)
+void reduce_worker(int rank, int num_reduce_workers, int num_files)
 {
     //primary_part is the first received partition and the rest of the partition will be adding to primary_part
     bool first_part = false;  
@@ -190,7 +202,7 @@ void reduce_worker(int rank, int num_reduce_workers)
                     }
                 }
 
-                //cannot aggregate, add key to pair array
+                //cannot aggregate, add new key to pair array
                 if(is_same == false)
                 {
                     primary_part->len += 1;
@@ -202,15 +214,15 @@ void reduce_worker(int rank, int num_reduce_workers)
     }
     
     //do reduce work and combine the result
-    KeyValue *result = (KeyValue *)malloc(primary_part.len);
+    KeyValue *result = (KeyValue *)malloc(primary_part.len * sizeof(KeyValue));
     for(int i = 0; i < primary_part.len; i ++)
     {
         int length = sizeof(primary_part->pair[i]->val) / sizeof(int);
-        KeyValue result;
         result[i] = reduce(primary_part->pair[i]->key, primary_part->pair[i]->val, length);
     }
 
     //TODO: send back to master (need to define a new MIP type????)
+    MPI_Send(result, sizeof(result), ?, 0, 0, MPI_COMM_WORLD);
     
 }
 
@@ -231,6 +243,9 @@ int main(int argc, char** argv) {
     char *output_file_name = argv[5];
     int map_reduce_task_num = atoi(argv[6]);
 
+    //TODO: store in buffer all declared in main and pass to the functions?
+    
+    
     // Identify the specific map function to use
     MapTaskOutput* (*map) (char*);
     switch(map_reduce_task_num){
@@ -248,27 +263,29 @@ int main(int argc, char** argv) {
     // Distinguish between master, map workers and reduce workers
     if (rank == 0) {
         // TODO: Implement master process logic
-        
-        //
-        
-        
+        master(input_files_dir, num_files, num_map_workers);
+        //step 1. read file into buffer
+        //step 2. distribute the files to all map workers
         //Step 3. (map) receive notificatation from workers after they complete
         //Step 4. (map) send more incompleted tasks to idle workers (if have)
-        //Step 5. (reduce) send reduce task to the reduce worker
-        //step 6: (gather) gather the final output and put into a single file
+
 
         printf("Rank (%d): This is the master process\n", rank);
     } else if ((rank >= 1) && (rank <= num_map_workers)) {
         // TODO: Implement map worker process logic
+        map_worker(map , rank, Stat, num_reduce_workers);
+
+
         //step 1. receive the files from master
-        MPI_Recv()
         //step 2. run the map function and generate key-value pairs
-        //step 3. partition (and store in separate file?)
-        //step 4. send the partitioned filed to master?
+        //step 3. generate partitions for each reduce worker
+        //step 4. send the partitions to corresponding reduce worker
 
         printf("Rank (%d): This is a map worker process\n", rank);
     } else {
         // TODO: Implement reduce worker process logic
+        reduce_worker(rank, num_reduce_workers, num_files);
+
         //step 1. receive the partion files from master
         //step 2. aggregate the values for each key into an array
         //step 3. send back to the master

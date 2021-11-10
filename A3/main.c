@@ -4,8 +4,47 @@
 #include "tasks.h"
 #include "utils.h"
 #include <string.h>
+#include <stddef.h>
 
 int MAX = 20000000; //~20MB
+typedef struct keypair {
+    char key[8];
+    int val;
+} keys;
+
+typedef struct MapkOutput {
+    int len;                // Length of `kvs` array
+    KeyValue *kvs;          // Array of KeyValue items
+} output;
+
+/*create a type for stuct key**********************************************************************/
+int nitems_keys = 2;
+int blocklengths[2] = {8, 1};
+MPI_Datatype types[2] = {MPI_CHAR, MPI_INT};
+MPI_Datatype mpi_keys_type;
+MPI_Aint offsets[2];
+
+offsets[0] = offsetof(keys, key);
+offsets[1] = offsetof(keys, val);
+
+MPI_Type_create_struct(nitems_keys, blocklengths, offsets, types, &mpi_key_type);
+MPI_Type_commit(&mpi_keys_type);
+
+/*create a type for strcut output******************************************************************/
+int nitems_output = 2;
+int blocklengths1[2] = {1, 2};
+MPI_Datatype types1[2] = {MPI_INT, mpi_keys_type};
+MPI_Datatype mpi_output_type;
+MPI_Aint offsets1[2];
+
+offsets1[0] = offsetof(output, len);
+offsets1[1] = offsetof(output, kvs);
+
+MPI_Type_create_struct(nitems_output, blocklengths1, offsets1, types1, &mpi_output_type);
+MPI_Type_commit(&mpi_output_type);
+
+/***************************************************************************************************/
+
 
 char *get_file_content(char *input_files_dir, int i)
 {
@@ -38,8 +77,9 @@ char *get_file_content(char *input_files_dir, int i)
 }
 
 
-void master(char *input_files_dir, int num_files)
+void master(char *input_files_dir, int num_files, int num_reduce_workers)
 {
+    //int reduce_worker_id = num_map_workers + 1;
     for(int i = 0; i < num_files; i ++)
     {
         //Step 1. Read the files into buffer
@@ -56,6 +96,13 @@ void master(char *input_files_dir, int num_files)
             printf("receiving from any completed worker!")
             MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
             MPI_Recv(output, MAX, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, Stat);
+            
+            //send to all reduce worker?
+            for(int j = 0; j < num_reduce_workers; j ++)
+            {
+                MPI_Send(???, strlen(output), datatype = ???, i + 1, i + 1, MPI_COMM_WORLD);
+            }
+            //send new file to that worker
             MPI_Send(file_content, strlen(file_content), MPI_CHAR, i + 1, i + 1, MPI_COMM_WORLD);
         }
     }
@@ -64,18 +111,72 @@ void master(char *input_files_dir, int num_files)
 
     for(int i = 1; i <= num_map_workers; i ++)
     {
-        rc = MPI_Receive(&completed, 1, MPI_CHAR, i, i, MPI_COMM_WORLD, Stat);
+        MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
+        MPI_Recv(output, MAX, ???, i, i, MPI_COMM_WORLD, Stat);
+
+        //send to all reduce worker?
+        for(int j = 0; j < num_reduce_workers; j ++)
+        {
+            MPI_Send(???, strlen(output), datatype = ???, ???, ???, MPI_COMM_WORLD);
+        }
     }
 }
 
-void map_worker()
-{
 
+void map_worker(MapTaskOutput* (*map) (char*) ,int rank, MPI_Status Stat)
+{
+   //todo map
+    char *file_content = (char*)malloc(MAX);
+    MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
+    MPI_Recv(file_content, MAX, ???, 0, 0, MPI_COMM_WORLD, Stat);
+    output = map(file_content);
+    MPI_Send(output, strlen(output), ???, 0, 0, MPI_COMM_WORLD);
 }
 
-void reduce_worker()
+typedef struct _storePartition
 {
+    char key[8];
+    int *val;
+} storePartition
 
+
+void reduce_worker(int rank, int num_reduce_workers)
+{
+    MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
+    MPI_Recv(output, MAX, ???, 0, 0, MPI_COMM_WORLD, Stat);
+
+    storePartition *aggregate;
+    for(int i = 0; i < output->len, i ++)
+    {
+        int p = partition(output->kvs[i]->key, num_reduce_workers);
+      
+        if(p == rank)
+        {
+            bool flag = false;
+            for(int j = 0; j < sizeof(aggregate); j ++)
+            {
+                if(aggregate[j]->key == output->kvs[i]->key)
+                {
+                    size_t index = sizeof(aggregate[j]->val);
+                    aggregate[j]->val[index] = output->kvs[i]->val;
+                    flag = true;
+                    break;
+                }
+            }
+
+            /*new key inserted*/
+            if(flag == false)
+            {
+                size_t index_a = sizeof(aggregate);
+                aggregate[index_a]->key = output->kvs[i]->key;
+                aggregate[index_a]->val[0] = output->kvs[i]->val;
+            }
+        }
+    }
+
+    
+
+    reduce(output->kvs[i]->key, output->kvs[i].val, )
 }
 
 int main(int argc, char** argv) {

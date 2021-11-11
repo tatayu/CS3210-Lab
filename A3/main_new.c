@@ -22,16 +22,19 @@ typedef struct MapkOutput {
 
 char *get_file_content(char *input_files_dir, int i)
 {
+    printf("6\n");
     char *filepath = input_files_dir;
     char *slash = "/";
     char *txt = ".txt";
     strcat(filepath, slash);
+    printf("7\n");	
 
-    char *num;
+    char num[10];
     sprintf(num, "%d", i);
+    printf("8\n");
     strcat(filepath, num);
-    printf("%s\n", filepath);
     char *filename = strcat(filepath, txt);
+    printf("%s\n", filepath);
     FILE *fp = fopen(filename, "r");
 
     if(fp == NULL)
@@ -316,25 +319,27 @@ int main(int argc, char** argv) {
         for(int i = 0; i < num_files; i ++)
         {
             //Step 1. Read the files into buffer
-            char *file_content = get_file_content(input_files_dir, i);
+	    char *file_content = (char *)malloc(MAX * (sizeof(char)));
+            file_content = get_file_content(input_files_dir, i);
+	    printf("file sent: %s \n", file_content);
 	    printf("get file\n");	
 
             //Step 2. (map) send the data to the map worker
             if(i < num_map_workers)
             {
-                printf("sending files to map workers...");
+                printf("sending files to map workers...\n");
                 MPI_Send(file_content, strlen(file_content), MPI_CHAR, i + 1, 0, MPI_COMM_WORLD);
             }
             else
             {
                 //wait for idle worker then send the rest of the files
-                printf("receiving from any completed worker!");
+                printf("receiving from any completed worker!\n");
                 char *message;
                 MPI_Recv(message, MAX, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &Stat);
                 if(*message == 'O')
                 {
                     //send new file to that worker
-                    printf("sending files to idel map workers...");
+                    printf("sending files to idel map workers...\n");
                     MPI_Send(file_content, strlen(file_content), MPI_CHAR, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD);
                 }
             }
@@ -345,11 +350,11 @@ int main(int argc, char** argv) {
         while(working_map_worker > 0)
         {
             char *message;
-            printf("receiving terminating message from map workers...");
+            printf("receiving terminating message from map workers...\n");
             MPI_Recv(message, MAX, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &Stat);
             if(*message == '#')
             {
-                printf("Replying back terminating message to map workers...");
+                printf("Replying back terminating message to map workers...\n");
                 MPI_Send(&terminating_message, 1, MPI_CHAR, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD);
                 working_map_worker -= 1;
 
@@ -377,49 +382,63 @@ int main(int argc, char** argv) {
         //step 4. send the partitions to corresponding reduce worker
 
         MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
-        storePartition *part= (storePartition *)malloc(num_reduce_workers * sizeof(storePartition));
-        for(int i = 0; i < num_reduce_workers; i ++)
+        printf("map1\n");
+	storePartition *part= (storePartition *)malloc(num_reduce_workers * sizeof(storePartition));
+        printf("map2\n");
+	for(int i = 0; i < num_reduce_workers; i ++)
         {
+	    printf("map3\n");
             part[i].len = 0;
             //malloc pair here?????
+	    printf("map4\n");
             part[i].pair = (storePair *)malloc(1000 * sizeof(storePair));
         }
 
         //TODO: need to change condition or receive a notification from master saying no more file to process?????
         while(1) 
         {
+	    printf("map5\n");
             char *file_content = (char*)malloc(MAX);
-            printf("receiving files from master...");
+            printf("receiving files from master...\n");
             MPI_Recv(file_content, MAX, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &Stat);
-            if(file_content[0] = '$')
+            printf("received!\n");
+	    printf("file content %s \n", &file_content[0] );
+	    if(file_content[0] = '$')
             {
-                break;
+               // break;
             }
             
             output = map(file_content);
 
             for(int i = 0; i < output->len; i ++)
-            {
+            {	
+		printf("calculating partition...");
                 int p = partition(output->kvs[i].key, num_reduce_workers);
+		printf("partition value: %d", p);
 
                 part[p].pair[part[p].len].val = (int *)malloc(1000 * sizeof(int));
-                memcpy(part[p].pair[part[p].len].key, output->kvs[i].key, sizeof(part[p].pair[part[p].len].key));
-                part[p].pair[part[p].len].val[0] = output->kvs[i].val;
-                part[p].len += 1;
+                printf("map5\n");
+		memcpy(part[p].pair[part[p].len].key, output->kvs[i].key, sizeof(part[p].pair[part[p].len].key));
+                printf("map6\n");
+		part[p].pair[part[p].len].val[0] = output->kvs[i].val;
+                printf("map7\n");
+		part[p].len += 1;
+		printf("map8\n");
             } 
             char message = '#';
-            printf("sending terminating message to master...");
-            MPI_Send(&message, 1, MPI_CHAR, rank, 0, MPI_COMM_WORLD);       
+            printf("sending terminating message to master...\n");
+            MPI_Send(&message, 1, MPI_CHAR, rank, 0, MPI_COMM_WORLD); 
+      	    break;	    
         }
 
         //after collecting the partition from ALL the files processed by this worker, sent each partition to corresponding reduce worker
         for(int i = 1; i <= num_reduce_workers; i++)
         {
-            printf("sending partitions to reduce workers...");
+            printf("sending partitions to reduce workers...\n");
             MPI_Send(&part[i], sizeof(part[i]), mpi_partitions_type, num_map_workers + i, 0, MPI_COMM_WORLD);
         }
 
-        printf("Map workers reach barrier!");
+        printf("Map workers reach barrier!\n");
         MPI_Barrier(MPI_COMM_WORLD);
 
         printf("Rank (%d): This is a map worker process\n", rank);
@@ -429,23 +448,27 @@ int main(int argc, char** argv) {
         //step 1. receive the partion files from master
         //step 2. aggregate the values for each key into an array
         //step 3. send back to the master
-
-        bool first_part = false;  
+	//while(1);	
+	printf("reduce 1\n");
+        bool first_part = false;
+        printf("reduce 2\n");	
         storePartition *primary_part = (storePartition *)malloc(sizeof(storePartition));
-
+	printf("reduce 3\n");
         //receive partitions generated by all the files
         for(int k = 0; k < num_files; k ++)
-        {
+        {   
+	    printf("reduce 4\n");
             if(first_part == false)
-            {
-                printf("Receiving the first partition from map worker!");
-                MPI_Recv(primary_part, MAX, mpi_partitions_type, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &Stat);
-                first_part = true;
+            { 
+                printf("Receiving the first partition from map worker!\n");
+                MPI_Recv(primary_part, sizeof(primary_part), mpi_partitions_type, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &Stat);
+                printf("received partion from map worker!!!");
+		first_part = true;
             }
             else
             {
                 storePartition *part = (storePartition *)malloc(sizeof(storePartition));
-                printf("Receiving the partitions from map workers...");
+                printf("Receiving the partitions from map workers...\n");
                 MPI_Recv(part, MAX, mpi_partitions_type, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &Stat);
                 
                 //check the keys and compare and add on to the primary part
@@ -483,10 +506,10 @@ int main(int argc, char** argv) {
             result[i] = reduce(primary_part->pair[i].key, primary_part->pair[i].val, length);
         }
 
-        printf("Reduce worker reach barrier!");
+        printf("Reduce worker reach barrier!\n");
         MPI_Barrier(MPI_COMM_WORLD);
         //TODO: send back to master (need to define a new MIP type????)
-        printf("Sending result back to master!");
+        printf("Sending result back to master!\n");
         MPI_Send(result, sizeof(result), mpi_keys_type, 0, 0, MPI_COMM_WORLD);
     
         printf("Rank (%d): This is a reduce worker process\n", rank);

@@ -303,6 +303,7 @@ int main(int argc, char** argv) {
             map = &map3;
             break;
     }
+    printf("5\n");
 
     // Distinguish between master, map workers and reduce workers
     if (rank == 0) {
@@ -312,11 +313,11 @@ int main(int argc, char** argv) {
         //step 2. distribute the files to all map workers
         //Step 3. (map) receive notificatation from workers after they complete
         //Step 4. (map) send more incompleted tasks to idle workers (if have)
-
         for(int i = 0; i < num_files; i ++)
         {
             //Step 1. Read the files into buffer
             char *file_content = get_file_content(input_files_dir, i);
+	    printf("get file\n");	
 
             //Step 2. (map) send the data to the map worker
             if(i < num_map_workers)

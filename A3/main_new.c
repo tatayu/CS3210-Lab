@@ -249,7 +249,7 @@ int main(int argc, char** argv) {
     //type for key[8] array
     //MPI_Type_contiguous(8, MPI_CHAR, &char_array_type);
     //MPI_Type_commit(&char_array_type);
-
+    printf("1\n");
     //type for keys
     int nitems_keys = 2;
     int blocklengths0[2] = {8, 1}; 
@@ -261,7 +261,8 @@ int main(int argc, char** argv) {
     MPI_Datatype mpi_keys_type;
     MPI_Type_create_struct(nitems_keys, blocklengths0, offsets0, types0, &mpi_keys_type);
     MPI_Type_commit(&mpi_keys_type);
-
+    
+    printf("2\n");
     //type for store pair
     int nitems_storePair = 2;
     int blocklengths1[2] = {8, 1000}; //array ???????????????????
@@ -274,6 +275,7 @@ int main(int argc, char** argv) {
     MPI_Type_create_struct(nitems_storePair, blocklengths1, offsets1, types1, &mpi_pairs_type);
     MPI_Type_commit(&mpi_pairs_type);
 
+    printf("3\n");
     //type for store partition
     int nitems_storePartition = 2;
     int blocklengths2[2] = {1, 1000};
@@ -287,6 +289,7 @@ int main(int argc, char** argv) {
     MPI_Type_commit(&mpi_partitions_type);
     /*********************************************************************************************************/
     
+    printf("4\n");
     // Identify the specific map function to use
     MapTaskOutput* (*map) (char*);
     switch(map_reduce_task_num){

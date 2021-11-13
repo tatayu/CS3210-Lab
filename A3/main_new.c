@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
         part[i].pair = (storePair *)malloc(1000 * sizeof(storePair));
     }
 
-    storePartition primary_part;
+    storePartition *primary_part = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));;
     primary_part.pair = (storePair *)malloc(1000 * sizeof(storePair));
     //primary_part->pair->val = (int *)malloc(1000 * sizeof(int));
     primary_part.len = 0;
@@ -281,7 +281,7 @@ int main(int argc, char** argv) {
 	    printf("[MAP]size of part sent: %ld \n", sizeof(*part));
 	    printf("[MAP]size of data type: %ld \n", sizeof(mpi_partitions_type));
 	    printf("[MAP]size of pair type: %ld \n", sizeof(mpi_pairs_type));
-            MPI_Send(&&part[i - 1], 1, mpi_partitions_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
+            MPI_Send(&part[i - 1], 1, mpi_partitions_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
             printf("[MAP]partition sent!\n");
 	}
 
@@ -314,15 +314,15 @@ int main(int argc, char** argv) {
 		//MPI_Probe(MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
 		//int c;
 		//MPI_Get_count(&Stat, mpi_partitions_type, &c);
-                MPI_Recv(&primary_part, 1, mpi_partitions_type, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
+                MPI_Recv(&primary_part[0], 1, mpi_partitions_type, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
                 printf("[REDUCE]received partion from map worker!!!\n");
 		first_part = true;
 		//int c;
 		//MPI_Get_count(&Stat, mpi_partitions_type, &c);
 		//printf("[REDUCE]count: %d\n", c);
-		printf("[REDUCE]len: %d\n", primary_part.len);
+		printf("[REDUCE]len: %d\n", primary_part->len);
 		// printf("[REDUCE]size of part: %ld\n", sizeof(primary_part));
-		// printf("[REDUCE]work: %s\n", primary_part->pair[0].key);
+		printf("[REDUCE]work: %s\n", primary_part[0]->pair[0].key);
             }
             else
             {

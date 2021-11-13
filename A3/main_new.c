@@ -109,11 +109,22 @@ int main(int argc, char** argv) {
     char *file_content = (char*)malloc(MAX);
     MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
     storePartition *part= (storePartition *)malloc(num_reduce_workers * sizeof(storePartition));
+    for(int i = 0; i < num_reduce_workers; i ++)
+    {
+        part[i].len = 0;
+        part[i].pair = (storePair *)malloc(1000 * sizeof(storePair));
+    }
+
     storePartition *primary_part = (storePartition *)malloc(sizeof(storePartition));
     primary_part->pair = (storePair *)malloc(1000 * sizeof(storePair));
     primary_part->pair->val = (int *)malloc(1000 * sizeof(int));
     primary_part->len = 0;
 
+    storePartition *rest_part = (storePartition *)malloc(sizeof(storePartition));
+    rest_part->pair = (storePair *)malloc(1000 * sizeof(storePair));
+    rest_part->pair->val = (int *)malloc(1000 * sizeof(int));
+    rest_part->len = 0;
+    
     // Distinguish between master, map workers and reduce workers
     //read from file **************************************************************************************************
     if (rank == 0) {
@@ -144,7 +155,6 @@ int main(int argc, char** argv) {
 
             fseek(fp, 0, SEEK_END);
             size_t size = ftell(fp);
-            //char *file_content = (char*)malloc(size);
 
             rewind(fp);
             fread((void*)file_content, 1, size, fp);
@@ -213,14 +223,7 @@ int main(int argc, char** argv) {
         
         printf("map1\n");
         printf("map2\n");
-	    for(int i = 0; i < num_reduce_workers; i ++)
-        {
-	        printf("map3\n");
-            part[i].len = 0;
-            //malloc pair here?????
-	        printf("map4\n");
-            part[i].pair = (storePair *)malloc(1000 * sizeof(storePair));
-        }
+	   
 
         //TODO: need to change condition or receive a notification from master saying no more file to process?????
         while(1) 
@@ -308,23 +311,23 @@ int main(int argc, char** argv) {
             }
             else
             {
-                storePartition *part = (storePartition *)malloc(sizeof(storePartition));
+                
                 //!add malloc
                 printf("[REDUCE]Receiving the partitions from map workers...\n");
-                MPI_Recv(part, MAX, mpi_partitions_type, rank, 0, MPI_COMM_WORLD, &Stat);
+                MPI_Recv(rest_part, MAX, mpi_partitions_type, rank, 0, MPI_COMM_WORLD, &Stat);
                 
                 //check the keys and compare and add on to the primary part
                 printf("[REDUCE]check the keys and compare and add on to the primary part...\n");
-                for(int i = 0; i < part->len; i ++)
+                for(int i = 0; i < rest_part->len; i ++)
                 {
                     bool is_same = false;
                     for(int j = 0; j < primary_part->len; j ++ )
                     {
                         //can aggregate
-                        if(part->pair[i].key == primary_part->pair[j].key)
+                        if(rest_part->pair[i].key == primary_part->pair[j].key)
                         {
                             size_t index = sizeof(primary_part->pair[j].val) / sizeof(int);
-                            primary_part->pair[j].val[index] = part->pair[i].val[0];
+                            primary_part->pair[j].val[index] = rest_part->pair[i].val[0];
                             is_same = true;
                             break;
                         }
@@ -334,8 +337,8 @@ int main(int argc, char** argv) {
                     if(is_same == false)
                     {
                         primary_part->len += 1;
-                        memcpy(primary_part->pair[primary_part->len].key, part->pair[i].key, sizeof(primary_part->pair[primary_part->len].key));  
-                        primary_part->pair[primary_part->len].val[0] = part->pair[i].val[0];
+                        memcpy(primary_part->pair[primary_part->len].key, rest_part->pair[i].key, sizeof(primary_part->pair[primary_part->len].key));  
+                        primary_part->pair[primary_part->len].val[0] = rest_part->pair[i].val[0];
                     }    
                 }
             }
@@ -359,6 +362,7 @@ int main(int argc, char** argv) {
     }
 
     //Clean up
+    free()
     MPI_Finalize();
     return 0;
 }

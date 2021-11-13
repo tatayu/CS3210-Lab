@@ -119,9 +119,6 @@ int main(int argc, char** argv) {
         part[i].pair = (storePair *)malloc(1000 * sizeof(storePair));
     }
 
-    storePartition sentToReduce;
-    sentToReduce.pair = (storePair *)malloc(1000 * sizeof(storePair));
-
     storePartition primary_part;
     primary_part.pair = (storePair *)malloc(1000 * sizeof(storePair));
     //primary_part->pair->val = (int *)malloc(1000 * sizeof(int));
@@ -284,8 +281,7 @@ int main(int argc, char** argv) {
 	    printf("[MAP]size of part sent: %ld \n", sizeof(*part));
 	    printf("[MAP]size of data type: %ld \n", sizeof(mpi_partitions_type));
 	    printf("[MAP]size of pair type: %ld \n", sizeof(mpi_pairs_type));
-            memcpy(&sentToReduce, &part[i - 1], sizeof(sentToReduce));
-            MPI_Send(&sentToReduce, 1, mpi_partitions_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
+            MPI_Send(&&part[i - 1], 1, mpi_partitions_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
             printf("[MAP]partition sent!\n");
 	}
 

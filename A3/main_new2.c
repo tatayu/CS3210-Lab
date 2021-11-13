@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
     //!MALLOC*******************************************************************************************************
     char *file_content = (char*)malloc(MAX);
     MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
-    storePartition **part;
+    storePartition *part[num_reduce_workers];
     for(int i = 0; i < num_reduce_workers; i ++)
     {
         part[i] = (storePartition *)malloc(sizeof(storePartition));

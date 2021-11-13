@@ -113,10 +113,6 @@ int main(int argc, char** argv) {
     {
         part[i].len = 0;
         part[i].pair = (storePair *)malloc(1000 * sizeof(storePair));
-	for(int j = 0; j < 1000; j ++)
-	{
-	    part[i].pair[j].val = (int *)malloc(1000 * sizeof(int));
-	}
     }
 
     storePartition *primary_part = (storePartition *)malloc(sizeof(storePartition));
@@ -126,7 +122,6 @@ int main(int argc, char** argv) {
 
     storePartition *rest_part = (storePartition *)malloc(sizeof(storePartition));
     rest_part->pair = (storePair *)malloc(1000 * sizeof(storePair));
-    rest_part->pair->val = (int *)malloc(1000 * sizeof(int));
     rest_part->len = 0;
     
     // Distinguish between master, map workers and reduce workers
@@ -330,7 +325,7 @@ int main(int argc, char** argv) {
                 
                 //!add malloc
                 printf("[REDUCE]Receiving the partitions from map workers...\n");
-                MPI_Recv(rest_part, MAX, mpi_partitions_type, rank, 0, MPI_COMM_WORLD, &Stat);
+                MPI_Recv(rest_part, 1, mpi_partitions_type, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
                 
                 //check the keys and compare and add on to the primary part
                 printf("[REDUCE]check the keys and compare and add on to the primary part...\n");
@@ -342,8 +337,7 @@ int main(int argc, char** argv) {
                         //can aggregate
                         if(rest_part->pair[i].key == primary_part->pair[j].key)
                         {
-                            size_t index = sizeof(primary_part->pair[j].val) / sizeof(int);
-                            primary_part->pair[j].val[index] = rest_part->pair[i].val[0];
+                            primary_part->pair[j].val += rest_part->pair[i].val;
                             is_same = true;
                             break;
                         }
@@ -354,7 +348,7 @@ int main(int argc, char** argv) {
                     {
                         primary_part->len += 1;
                         memcpy(primary_part->pair[primary_part->len].key, rest_part->pair[i].key, sizeof(primary_part->pair[primary_part->len].key));  
-                        primary_part->pair[primary_part->len].val[0] = rest_part->pair[i].val[0];
+                        primary_part->pair[primary_part->len].val += rest_part->pair[i].val;
                     }    
                 }
             }

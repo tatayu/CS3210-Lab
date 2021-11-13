@@ -120,6 +120,7 @@ int main(int argc, char** argv) {
     }
 
     storePartition sentToReduce;
+    sentToReduce.pair = (storePair *)malloc(1000 * sizeof(storePair));
 
     storePartition primary_part;
     primary_part.pair = (storePair *)malloc(1000 * sizeof(storePair));

@@ -277,7 +277,7 @@ int main(int argc, char** argv) {
 	    printf("[MAP]key: %s\n",part[i-1]->pair[0].key);
 	    printf("[MAP]val: %d\n", part[i-1]->pair[0].val);
 	    printf("[MAP]size of part sent: %ld \n", sizeof(part[i-1]));
-            MPI_Send(&part[i - 1], 1, mpi_partitions_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
+            MPI_Send(part[i - 1], 1, mpi_partitions_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
             printf("[MAP]partition sent!\n");
 	}
 
@@ -310,7 +310,7 @@ int main(int argc, char** argv) {
 		//MPI_Probe(MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
 		//int c;
 		//MPI_Get_count(&Stat, mpi_partitions_type, &c);
-                MPI_Recv(&primary_part, 1, mpi_partitions_type, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
+                MPI_Recv(primary_part, 1, mpi_partitions_type, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
                 printf("[REDUCE]received partion from map worker!!!\n");
 		first_part = true;
 		//int c;
@@ -318,7 +318,7 @@ int main(int argc, char** argv) {
 		//printf("[REDUCE]count: %d\n", c);
 		printf("[REDUCE]len: %d\n", primary_part->len);
 		printf("[REDUCE]size of part: %ld\n", sizeof(primary_part));
-		printf("[REDUCE]work: %d\n", primary_part->pair[0].val);
+		printf("[REDUCE]work: %s\n", primary_part->pair->key);
             }
             else
             {

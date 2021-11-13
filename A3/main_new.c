@@ -22,7 +22,7 @@ typedef struct MapkOutput {
 typedef struct _storePair
 {
     char key[8];
-    int *val;
+    int val;
 } storePair;
 
 typedef struct _storePartition
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
     printf("2\n");
     //type for store pair
     int nitems_storePair = 2;
-    int blocklengths1[2] = {8, 1000}; //array ???????????????????
+    int blocklengths1[2] = {8, 1}; //array ???????????????????
     
     MPI_Aint offsets1[2];
     offsets1[0] = (MPI_Aint) offsetof(storePair, key);
@@ -256,7 +256,7 @@ int main(int argc, char** argv) {
 		        memcpy(part[p].pair[part[p].len].key, output->kvs[i].key, sizeof(part[p].pair[part[p].len].key));
 			printf("[MAP]part p pair key: %s\n", part[p].pair[part[p].len].key);
                 printf("map6\n");
-		        part[p].pair[part[p].len].val[0] = output->kvs[i].val;
+		        part[p].pair[part[p].len].val = output->kvs[i].val;
                 printf("map7\n");
 		        part[p].len += 1;
 		        printf("map8\n");
@@ -315,7 +315,7 @@ int main(int argc, char** argv) {
 		MPI_Probe(MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
 		int c;
 		MPI_Get_count(&Stat, mpi_partitions_type, &c);
-                MPI_Recv(primary_part, 2, mpi_partitions_type, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
+                MPI_Recv(primary_part, 1, mpi_partitions_type, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
                 printf("[REDUCE]received partion from map worker!!!\n");
 		first_part = true;
 		//int c;

@@ -57,6 +57,8 @@ int main(int argc, char** argv) {
     MPI_Aint offsets0[2];
     offsets0[0] = (MPI_Aint) offsetof(keys, key);
     offsets0[1] = (MPI_Aint) offsetof(keys, val);
+    printf("offset key: %ld\n", offsets0[0]);
+    printf("offset val: %ld\n", offsets0[1]);
     MPI_Datatype types0[2] = {MPI_CHAR, MPI_INT};
     MPI_Datatype mpi_keys_type;
     MPI_Type_create_struct(nitems_keys, blocklengths0, offsets0, types0, &mpi_keys_type);
@@ -74,6 +76,8 @@ int main(int argc, char** argv) {
     MPI_Datatype mpi_pairs_type;
     MPI_Type_create_struct(nitems_storePair, blocklengths1, offsets1, types1, &mpi_pairs_type);
     MPI_Type_commit(&mpi_pairs_type);
+    printf("MPI_CHAR:%ld\n", sizeof(MPI_CHAR));
+    printf("MPI_INT:%ld\n", sizeof(MPI_INT));
 
     printf("3\n");
     //type for store partition
@@ -115,7 +119,7 @@ int main(int argc, char** argv) {
         part[i].pair = (storePair *)malloc(1000 * sizeof(storePair));
     }
 
-    storePartition *primary_part = (storePartition *)malloc(sizeof(storePartition));
+    storePartition primary_part; //= (storePartition *)malloc(sizeof(storePartition));
     //primary_part->pair = (storePair *)malloc(1000 * sizeof(storePair));
     //primary_part->pair->val = (int *)malloc(1000 * sizeof(int));
     //primary_part->len = 0;
@@ -239,7 +243,6 @@ int main(int argc, char** argv) {
             }
             
             output = map(file_content);
-
             for(int i = 0; i < output->len; i ++)
             {	
 		    	
@@ -273,8 +276,9 @@ int main(int argc, char** argv) {
         for(int i = 1; i <= num_reduce_workers; i++)
         {
             printf("[MAP]sending partitions to reduce workers...\n");
-	    printf("[MAP] len: %s\n",part[i-1].pair[0].key);
-	    printf("[MAP]size of part sent: %ld \n", sizeof(part[i - 1]));
+	    printf("[MAP]key: %s\n",part[i-1].pair[0].key);
+	    printf("[MAP]val: %d\n", part[i-1].pair[0].val);
+	    printf("[MAP]size of part sent: %ld \n", sizeof(*part));
 	    printf("[MAP]size of data type: %ld \n", sizeof(mpi_partitions_type));
 	    printf("[MAP]size of pair type: %ld \n", sizeof(mpi_pairs_type));
             MPI_Send(&part[i - 1], 1, mpi_partitions_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
@@ -355,18 +359,18 @@ int main(int argc, char** argv) {
         }
         
         //do reduce work and combine the result
-        KeyValue *result = (KeyValue *)malloc(primary_part->len * sizeof(KeyValue));
-        for(int i = 0; i < primary_part->len; i ++)
-        {
-            int length = sizeof(primary_part->pair[i].val) / sizeof(int);
-            result[i] = reduce(primary_part->pair[i].key, primary_part->pair[i].val, length);
-        }
+        //KeyValue *result = (KeyValue *)malloc(primary_part->len * sizeof(KeyValue));
+        //for(int i = 0; i < primary_part->len; i ++)
+        //{
+            //int length = sizeof(primary_part->pair[i].val) / sizeof(int);
+            //result[i] = reduce(primary_part->pair[i].key, primary_part->pair[i].val, length);
+        //}
 
         printf("[REDUCE]second barrier!\n");
         //!barrier
         MPI_Barrier(MPI_COMM_WORLD);
         printf("[REDUCE]Sending result back to master!\n");
-        MPI_Send(result, sizeof(result), mpi_keys_type, 0, 0, MPI_COMM_WORLD);
+        //MPI_Send(result, sizeof(result), mpi_keys_type, 0, 0, MPI_COMM_WORLD);
     
         printf("Rank (%d): This is a reduce worker process\n", rank);
     }

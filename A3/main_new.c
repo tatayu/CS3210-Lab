@@ -111,7 +111,9 @@ int main(int argc, char** argv) {
     storePartition *part= (storePartition *)malloc(num_reduce_workers * sizeof(storePartition));
     storePartition *primary_part = (storePartition *)malloc(sizeof(storePartition));
     primary_part->pair = (storePair *)malloc(1000 * sizeof(storePair));
-    
+    primary_part->pair->val = (int *)malloc(1000 * sizeof(int));
+    primary_part->len = 0;
+
     // Distinguish between master, map workers and reduce workers
     //read from file **************************************************************************************************
     if (rank == 0) {
@@ -238,12 +240,14 @@ int main(int argc, char** argv) {
 
             for(int i = 0; i < output->len; i ++)
             {	
+		    	
 		        printf("[MAP]calculating partition...\n");
-                int p = partition(output->kvs[i].key, num_reduce_workers);
-		        printf("[MAP]partition value: %d", p);
+                int p = partition(output->kvs[i].key, num_reduce_workers);        
+		printf("[MAP]partition value: %d\n", p);
                 part[p].pair[part[p].len].val = (int *)malloc(1000 * sizeof(int));
                 printf("map5\n");
 		        memcpy(part[p].pair[part[p].len].key, output->kvs[i].key, sizeof(part[p].pair[part[p].len].key));
+			printf("[MAP]part p pair key: %s\n", part[p].pair[part[p].len].key);
                 printf("map6\n");
 		        part[p].pair[part[p].len].val[0] = output->kvs[i].val;
                 printf("map7\n");
@@ -267,8 +271,10 @@ int main(int argc, char** argv) {
         for(int i = 1; i <= num_reduce_workers; i++)
         {
             printf("[MAP]sending partitions to reduce workers...\n");
-            MPI_Send(&part[i], sizeof(part[i]), mpi_partitions_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
-        }
+	    printf("[MAP] len: %s\n",part[i-1].pair[1].key);
+            MPI_Send(&part[i - 1], sizeof(part[i - 1]), mpi_partitions_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
+            printf("[MAP]partition sent!\n");
+	}
 
         //!barrier
         printf("[MAP]second barrier!\n");

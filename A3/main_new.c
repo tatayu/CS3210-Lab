@@ -119,13 +119,13 @@ int main(int argc, char** argv) {
         part[i].pair = (storePair *)malloc(1000 * sizeof(storePair));
     }
 
-    storePartition primary_part; //= (storePartition *)malloc(sizeof(storePartition));
-    //primary_part->pair = (storePair *)malloc(1000 * sizeof(storePair));
+    storePartition *primary_part = (storePartition *)malloc(sizeof(storePartition));
+    primary_part->pair = (storePair *)malloc(1000 * sizeof(storePair));
     //primary_part->pair->val = (int *)malloc(1000 * sizeof(int));
-    //primary_part->len = 0;
+    primary_part->len = 0;
 
     storePartition rest_part; //= (storePartition *)malloc(sizeof(storePartition));
-    // rest_part->pair = (storePair *)malloc(1000 * sizeof(storePair));
+    rest_part->pair = (storePair *)malloc(1000 * sizeof(storePair));
     // rest_part->len = 0;
     
     // Distinguish between master, map workers and reduce workers
@@ -311,50 +311,50 @@ int main(int argc, char** argv) {
             if(first_part == false)
             { 
                 printf("[REDUCE]Receiving the first partition from map worker!\n");
-		MPI_Probe(MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
-		int c;
-		MPI_Get_count(&Stat, mpi_partitions_type, &c);
+		//MPI_Probe(MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
+		//int c;
+		//MPI_Get_count(&Stat, mpi_partitions_type, &c);
                 MPI_Recv(&primary_part, 1, mpi_partitions_type, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
                 printf("[REDUCE]received partion from map worker!!!\n");
 		first_part = true;
 		//int c;
 		//MPI_Get_count(&Stat, mpi_partitions_type, &c);
 		printf("[REDUCE]count: %d\n", c);
-		printf("[REDUCE]len: %d\n", primary_part.len);
+		printf("[REDUCE]len: %d\n", primary_part->len);
 		printf("[REDUCE]size of part: %ld\n", sizeof(primary_part));
-		printf("[REDUCE]work: %s\n", primary_part.pair[0].key);
+		printf("[REDUCE]work: %s\n", primary_part.pair[0]->key);
             }
             else
             {
                 
-                //!add malloc
-                printf("[REDUCE]Receiving the partitions from map workers...\n");
-                MPI_Recv(&rest_part, 1, mpi_partitions_type, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
+                // //!add malloc
+                // printf("[REDUCE]Receiving the partitions from map workers...\n");
+                // MPI_Recv(&rest_part, 1, mpi_partitions_type, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
                 
-                //check the keys and compare and add on to the primary part
-                printf("[REDUCE]check the keys and compare and add on to the primary part...\n");
-                for(int i = 0; i < rest_part.len; i ++)
-                {
-                    bool is_same = false;
-                    for(int j = 0; j < primary_part.len; j ++ )
-                    {
-                        //can aggregate
-                        if(rest_part.pair[i].key == primary_part.pair[j].key)
-                        {
-                            primary_part.pair[j].val += rest_part.pair[i].val;
-                            is_same = true;
-                            break;
-                        }
-                    }
+                // //check the keys and compare and add on to the primary part
+                // printf("[REDUCE]check the keys and compare and add on to the primary part...\n");
+                // for(int i = 0; i < rest_part.len; i ++)
+                // {
+                //     bool is_same = false;
+                //     for(int j = 0; j < primary_part.len; j ++ )
+                //     {
+                //         //can aggregate
+                //         if(rest_part.pair[i].key == primary_part.pair[j].key)
+                //         {
+                //             primary_part.pair[j].val += rest_part.pair[i].val;
+                //             is_same = true;
+                //             break;
+                //         }
+                //     }
 
-                    //cannot aggregate, add new key to pair array
-                    if(is_same == false)
-                    {
-                        primary_part.len += 1;
-                        memcpy(primary_part.pair[primary_part.len].key, rest_part.pair[i].key, sizeof(primary_part.pair[primary_part.len].key));  
-                        primary_part.pair[primary_part.len].val += rest_part.pair[i].val;
-                    }    
-                }
+                //     //cannot aggregate, add new key to pair array
+                //     if(is_same == false)
+                //     {
+                //         primary_part.len += 1;
+                //         memcpy(primary_part.pair[primary_part.len].key, rest_part-pair[i].key, sizeof(primary_part.pair[primary_part.len].key));  
+                //         primary_part.pair[primary_part.len].val += rest_part.pair[i].val;
+                //     }    
+                // }
             }
         }
         

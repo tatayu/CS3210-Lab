@@ -112,11 +112,12 @@ int main(int argc, char** argv) {
     //!MALLOC*******************************************************************************************************
     char *file_content = (char*)malloc(MAX);
     MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
-    storePartition *part= (storePartition *)malloc(num_reduce_workers * sizeof(storePartition));
+    storePartition **part;
     for(int i = 0; i < num_reduce_workers; i ++)
     {
-        part[i].len = 0;
-        part[i].pair = (storePair *)malloc(1000 * sizeof(storePair));
+        part[i] = (storePartition *)malloc(num_reduce_workers * sizeof(storePartition));
+        part[i]->len = 0;
+        part[i]->pair = (storePair *)malloc(1000 * sizeof(storePair));
     }
 
     storePartition *primary_part = (storePartition *)malloc(sizeof(storePartition));
@@ -124,8 +125,8 @@ int main(int argc, char** argv) {
     //primary_part->pair->val = (int *)malloc(1000 * sizeof(int));
     primary_part->len = 0;
 
-    storePartition rest_part; //= (storePartition *)malloc(sizeof(storePartition));
-    rest_part->pair = (storePair *)malloc(1000 * sizeof(storePair));
+    // storePartition rest_part; //= (storePartition *)malloc(sizeof(storePartition));
+    // rest_part->pair = (storePair *)malloc(1000 * sizeof(storePair));
     // rest_part->len = 0;
     
     // Distinguish between master, map workers and reduce workers
@@ -248,15 +249,12 @@ int main(int argc, char** argv) {
 		    	
 		        printf("[MAP]calculating partition...\n");
                 int p = partition(output->kvs[i].key, num_reduce_workers);        
-		printf("[MAP]partition value: %d\n", p);
+		        printf("[MAP]partition value: %d\n", p);
                 //part[p].pair[part[p].len].val = (int *)malloc(1000 * sizeof(int));
-                printf("map5\n");
-		        memcpy(part[p].pair[part[p].len].key, output->kvs[i].key, sizeof(part[p].pair[part[p].len].key));
-			printf("[MAP]part p pair key: %s\n", part[p].pair[part[p].len].key);
-                printf("map6\n");
-		        part[p].pair[part[p].len].val = output->kvs[i].val;
-                printf("map7\n");
-		        part[p].len += 1;
+		        memcpy(part[p]->pair[part[p]->len].key, output->kvs[i].key, sizeof(part[p]->pair[part[p]->len].key));
+			    printf("[MAP]part p pair key: %s\n", part[p]->pair[part[p]->len].key);
+		        part[p]->pair[part[p]->len].val = output->kvs[i].val;
+		        part[p]->len += 1;
 		        printf("map8\n");
             } 
             
@@ -276,12 +274,10 @@ int main(int argc, char** argv) {
         for(int i = 1; i <= num_reduce_workers; i++)
         {
             printf("[MAP]sending partitions to reduce workers...\n");
-	    printf("[MAP]key: %s\n",part[i-1].pair[0].key);
-	    printf("[MAP]val: %d\n", part[i-1].pair[0].val);
+	    printf("[MAP]key: %s\n",part[i-1]->pair[0].key);
+	    printf("[MAP]val: %d\n", part[i-1]->pair[0].val);
 	    printf("[MAP]size of part sent: %ld \n", sizeof(*part));
-	    printf("[MAP]size of data type: %ld \n", sizeof(mpi_partitions_type));
-	    printf("[MAP]size of pair type: %ld \n", sizeof(mpi_pairs_type));
-            MPI_Send(&part[i - 1], 1, mpi_partitions_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
+            MPI_Send(part[i - 1], 1, mpi_partitions_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
             printf("[MAP]partition sent!\n");
 	}
 
@@ -314,15 +310,15 @@ int main(int argc, char** argv) {
 		//MPI_Probe(MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
 		//int c;
 		//MPI_Get_count(&Stat, mpi_partitions_type, &c);
-                MPI_Recv(&primary_part, 1, mpi_partitions_type, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
+                MPI_Recv(primary_part, 1, mpi_partitions_type, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
                 printf("[REDUCE]received partion from map worker!!!\n");
 		first_part = true;
 		//int c;
 		//MPI_Get_count(&Stat, mpi_partitions_type, &c);
-		printf("[REDUCE]count: %d\n", c);
+		//printf("[REDUCE]count: %d\n", c);
 		printf("[REDUCE]len: %d\n", primary_part->len);
 		printf("[REDUCE]size of part: %ld\n", sizeof(primary_part));
-		printf("[REDUCE]work: %s\n", primary_part.pair[0]->key);
+		printf("[REDUCE]work: %s\n", primary_part->pair[0].key);
             }
             else
             {
@@ -380,7 +376,7 @@ int main(int argc, char** argv) {
     free(output);
     free(part);
     //free(primary_part);
-    free(rest_part);
+    //free(rest_part);
     MPI_Finalize();
     return 0;
 }

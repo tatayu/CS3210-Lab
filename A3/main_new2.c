@@ -252,8 +252,8 @@ int main(int argc, char** argv) {
 		        printf("[MAP]partition value: %d\n", p);
                 //part[p].pair[part[p].len].val = (int *)malloc(1000 * sizeof(int));
 		        memcpy(part[p]->pair[part[p]->len].key, output->kvs[i].key, sizeof(part[p]->pair[part[p]->len].key));
-			    printf("[MAP]part p pair key: %s\n", part[p]->pair[part[p]->len].key);
 		        part[p]->pair[part[p]->len].val = output->kvs[i].val;
+                printf("[MAP]part p pair key-value: %s %d\n", part[p]->pair[part[p]->len].key, part[p]->pair[part[p]->len].val);
 		        part[p]->len += 1;
 		        printf("map8\n");
             } 

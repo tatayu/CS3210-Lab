@@ -113,6 +113,10 @@ int main(int argc, char** argv) {
     {
         part[i].len = 0;
         part[i].pair = (storePair *)malloc(1000 * sizeof(storePair));
+	for(int j = 0; j < 1000; j ++)
+	{
+	    part[i].pair[j].val = (int *)malloc(1000 * sizeof(int));
+	}
     }
 
     storePartition *primary_part = (storePartition *)malloc(sizeof(storePartition));
@@ -247,7 +251,7 @@ int main(int argc, char** argv) {
 		        printf("[MAP]calculating partition...\n");
                 int p = partition(output->kvs[i].key, num_reduce_workers);        
 		printf("[MAP]partition value: %d\n", p);
-                part[p].pair[part[p].len].val = (int *)malloc(1000 * sizeof(int));
+                //part[p].pair[part[p].len].val = (int *)malloc(1000 * sizeof(int));
                 printf("map5\n");
 		        memcpy(part[p].pair[part[p].len].key, output->kvs[i].key, sizeof(part[p].pair[part[p].len].key));
 			printf("[MAP]part p pair key: %s\n", part[p].pair[part[p].len].key);
@@ -274,7 +278,7 @@ int main(int argc, char** argv) {
         for(int i = 1; i <= num_reduce_workers; i++)
         {
             printf("[MAP]sending partitions to reduce workers...\n");
-	    printf("[MAP] len: %s\n",part[i-1].pair[1].key);
+	    printf("[MAP] len: %d\n",part[i-1].pair[1].val[2]);
             MPI_Send(&part[i - 1], sizeof(part[i - 1]), mpi_partitions_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
             printf("[MAP]partition sent!\n");
 	}
@@ -362,7 +366,11 @@ int main(int argc, char** argv) {
     }
 
     //Clean up
-    free()
+    free(file_content);
+    free(output);
+    free(part);
+    free(primary_part);
+    free(rest_part);
     MPI_Finalize();
     return 0;
 }

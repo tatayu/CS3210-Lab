@@ -119,10 +119,10 @@ int main(int argc, char** argv) {
         part[i].pair = (storePair *)malloc(1000 * sizeof(storePair));
     }
 
-    storePartition *primary_part = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));;
-    primary_part.pair = (storePair *)malloc(1000 * sizeof(storePair));
+    storePartition *primary_part = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
+    primary_part->pair = (storePair *)malloc(1000 * sizeof(storePair));
     //primary_part->pair->val = (int *)malloc(1000 * sizeof(int));
-    primary_part.len = 0;
+    primary_part->len = 0;
 
     // storePartition rest_part; //= (storePartition *)malloc(sizeof(storePartition));
     // rest_part->pair = (storePair *)malloc(1000 * sizeof(storePair));
@@ -322,7 +322,7 @@ int main(int argc, char** argv) {
 		//printf("[REDUCE]count: %d\n", c);
 		printf("[REDUCE]len: %d\n", primary_part->len);
 		// printf("[REDUCE]size of part: %ld\n", sizeof(primary_part));
-		printf("[REDUCE]work: %s\n", primary_part[0]->pair[0].key);
+		printf("[REDUCE]work: %s\n", primary_part[0].pair[0].key);
             }
             else
             {

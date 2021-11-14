@@ -129,7 +129,9 @@ int main(int argc, char** argv) {
         for(int i = 0; i < num_files; i ++)
         {
             //Step 1. Read the files into buffer*******************************************************************************************
-            char *filepath = input_files_dir;
+             char *filepath = (char *)malloc(100*sizeof(char));
+	        memcpy(filepath, input_files_dir, strlen(input_files_dir)+1);
+            printf("%s\n", filepath);
             char *slash = "/";
             char *txt = ".txt";
             strcat(filepath, slash);
@@ -235,7 +237,7 @@ int main(int argc, char** argv) {
             MPI_Recv(file_content, MAX, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &Stat);
             //printf("[MAP]received!\n");
 	        //printf("[MAP]file content %s \n", &file_content[0] );
-	        if(file_content[0] = '$')
+	        if(file_content[0] == '$')
             {
                break;
             }

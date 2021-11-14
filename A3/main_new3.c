@@ -178,15 +178,11 @@ int main(int argc, char** argv) {
             }
             
         }
-        printf("[MASTER] frist barrier\n");
-        
-        printf("[MASTER] second barrier\n");
-
         FILE *result = fopen("result.out", "w");
         for(int i = 0; i < num_reduce_workers; i++)
         {
             int len = 0;
-            //printf("[MASTER]Receiving length of pairs from reduce workers...\n");
+            printf("[MASTER]Receiving length of pairs from reduce workers...\n");
             MPI_Recv(&len, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &Stat);
             //printf("[MASTER]Length of pairs received!!!\n");
             
@@ -230,7 +226,11 @@ int main(int argc, char** argv) {
 		        //printf("[MAP]partition value: %d\n", p);
 		        MPI_Send(&output->kvs[i], 1, mpi_pairs_type, num_map_workers + p + 1, num_map_workers + p + 1, MPI_COMM_WORLD);
             }
-            MPI_Send(reduce_pair, 1, mpi_pairs_type, num_map_workers + p + 1, num_map_workers + p + 1, MPI_COMM_WORLD)
+
+            for(int i = 1; i <= num_reduce_workers; i++)
+            {
+                MPI_Send(reduce_pair, 1, mpi_pairs_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
+            }
             
             char message = '#';
             printf("[MAP]sending terminating message to master...\n");
@@ -266,9 +266,9 @@ int main(int argc, char** argv) {
                 {
                     if(strcmp(reduce_pair->key, partition_table->pair[k].key) == 0)
                     {
-                        printf("old: %d", partition_table->pair[k].val);
+                        //printf("old: %d", partition_table->pair[k].val);
                         partition_table->pair[k].val += reduce_pair->val;
-                        printf("key: %s, add: %d, new: %d\n", reduce_pair->key, reduce_pair->val,  partition_table->pair[k].val);
+                        //printf("key: %s, add: %d, new: %d\n", reduce_pair->key, reduce_pair->val,  partition_table->pair[k].val);
                         is_duplicate = true;
                         break;
                     }
@@ -276,7 +276,7 @@ int main(int argc, char** argv) {
 
                 if(is_duplicate == false)
                 {
-                    printf("[REDUCE]adding new keys to the partition table...\n");
+                    //printf("[REDUCE]adding new keys to the partition table...\n");
                     memcpy(partition_table->pair[partition_table->len].key, reduce_pair->key, sizeof(partition_table->pair[partition_table->len].key));
                     partition_table->pair[partition_table->len].val = reduce_pair->val;
                     partition_table->len += 1;         

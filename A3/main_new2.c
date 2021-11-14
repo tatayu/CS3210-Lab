@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
 
                 if(result != NULL)
                 {
-                    fwrite(master_pair, sizeof(struct storePair), 1, result);
+                    fprintf(result, "%s %d \n", master_pair->key, master_pair->val);
                 }
             }
         }

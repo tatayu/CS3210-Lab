@@ -258,7 +258,7 @@ int main(int argc, char** argv) {
             {
                 printf("[MAP]sending pair...\n");
                 MPI_Send(&part[i - 1]->pair[j], 1, mpi_pairs_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
-                printf("[MAP]pair sent!!!\n")
+                printf("[MAP]pair sent!!!\n");
             }
 	    }
 
@@ -287,8 +287,8 @@ int main(int argc, char** argv) {
                 printf("[REDUCE]Receiving the pair %d from map worker...\n", j);
                 MPI_Recv(reduce_pair, 1, mpi_pairs_type, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);
                 printf("[REDUCE]received pair %d from map worker!!!\n", j);
-                printf("[REDUCE]key: %d\n", reduce_pair->key);
-                printf("[REDUCE]val: %s\n", reduce_pair->val);
+                printf("[REDUCE]key: %s\n", reduce_pair->key);
+                printf("[REDUCE]val: %d\n", reduce_pair->val);
                 
                 bool is_duplicate = false;
                 //TODO: put into partition table
@@ -305,8 +305,8 @@ int main(int argc, char** argv) {
                 if(is_duplicate == false)
                 {
                     printf("[REDUCE]adding new keys to the partition table...\n");
-                    memcpy(partition_table->pair[partition_table->len]->key, reduce_pair->key, sizeof(partition_table->pair[partition_table->len]->key));
-                    partition_table->pair[partition_table->len]->val = reduce_pair->val;
+                    memcpy(partition_table->pair[partition_table->len].key, reduce_pair->key, sizeof(partition_table->pair[partition_table->len].key));
+                    partition_table->pair[partition_table->len].val = reduce_pair->val;
                     partition_table->len += 1;         
                 }
             }
@@ -334,11 +334,11 @@ int main(int argc, char** argv) {
 
 
     //Clean up
-    free(file_content);
-    free(output);
-    free(part);
-    free(reduce_pair);
-    free(partition_table);
+    //free(file_content);
+    //free(output);
+    //free(part);
+    //free(reduce_pair);
+    //free(partition_table);
     MPI_Finalize();
     return 0;
 }

@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
     }
 
     //!MALLOC*******************************************************************************************************
-    char *file_content = (char*)malloc(MAX);
+    //char *file_content = (char*)malloc(MAX);
     MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
     storePartition *part[num_reduce_workers];
     for(int i = 0; i < num_reduce_workers; i ++)
@@ -128,6 +128,7 @@ int main(int argc, char** argv) {
        
         for(int i = 0; i < num_files; i ++)
         {
+            char *file_content = (char*)malloc(MAX);
             //Step 1. Read the files into buffer*******************************************************************************************
              char *filepath = (char *)malloc(100*sizeof(char));
 	        memcpy(filepath, input_files_dir, strlen(input_files_dir)+1);
@@ -176,6 +177,7 @@ int main(int argc, char** argv) {
                     MPI_Send(file_content, strlen(file_content), MPI_CHAR, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD);
                 }
             }
+            free(file_content);
         }
 
         

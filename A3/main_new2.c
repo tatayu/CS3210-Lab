@@ -129,8 +129,10 @@ int main(int argc, char** argv) {
         for(int i = 0; i < num_files; i ++)
         {
             //Step 1. Read the files into buffer*******************************************************************************************
-            char *filepath = input_files_dir;
-            char *slash = "/";
+	    char *filepath = (char *)malloc(100*sizeof(char));
+	    memcpy(filepath, input_files_dir, strlen(input_files_dir)+1);
+            printf("%s\n", filepath);
+	    char *slash = "/";
             char *txt = ".txt";
             strcat(filepath, slash);
 
@@ -165,9 +167,9 @@ int main(int argc, char** argv) {
             {
                 //wait for idle worker then send the rest of the files
                 printf("[MASTER]receiving from any completed worker!\n");
-                char *message;
-                MPI_Recv(message, MAX, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &Stat);
-                if(*message == '#')
+                char message;
+                MPI_Recv(&message, 1, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &Stat);
+                if(message == '#')
                 {
                     //send new file to that worker
                     printf("[MASTER]sending files to idel map workers...\n");
@@ -235,7 +237,7 @@ int main(int argc, char** argv) {
             MPI_Recv(file_content, MAX, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &Stat);
             printf("[MAP]received!\n");
 	         printf("[MAP]file content %s \n", &file_content[0] );
-	        if(file_content[0] = '$')
+	        if(file_content[0] == '$')
             {
                break;
             }

@@ -206,7 +206,6 @@ int main(int argc, char** argv) {
         
     } else if ((rank >= 1) && (rank <= num_map_workers)) {
         reduce_pair->val = -1;
-        int p;
         while(1) 
         {   
             memset(file_content, 0, MAX);
@@ -222,7 +221,7 @@ int main(int argc, char** argv) {
             output = map(file_content);
             for(int i = 0; i < output->len; i ++)
             {	
-                p = partition(output->kvs[i].key, num_reduce_workers);        
+                int p = partition(output->kvs[i].key, num_reduce_workers);        
 		        //printf("[MAP]partition value: %d\n", p);
 		        MPI_Send(&output->kvs[i], 1, mpi_pairs_type, num_map_workers + p + 1, num_map_workers + p + 1, MPI_COMM_WORLD);
             }
@@ -238,9 +237,7 @@ int main(int argc, char** argv) {
         }
 
 
-        //!barrier
-        printf("[MAP]second barrier!\n");
-        
+        //!barrier        
         printf("Rank (%d): This is a map worker process\n", rank);
 
     } 
@@ -257,6 +254,7 @@ int main(int argc, char** argv) {
             if(reduce_pair->val == -1)
             {
                 number_of_files -= 1;
+                printf("[REDUCE] terminating value with number of files = %d\n",number_of_files);
             }
             else
             {
@@ -292,15 +290,13 @@ int main(int argc, char** argv) {
             MPI_Send(&partition_table->pair[i], 1, mpi_pairs_type, 0, 0, MPI_COMM_WORLD);
             //printf("[REDUCE]pairs sent!!!\n");
         }
+        printf("Rank (%d): This is a reduce worker process\n", rank);
+
     }
     else
     {
         //do nothing
     }
-
-        
-    printf("Rank (%d): This is a reduce worker process\n", rank);
-
 
     //Clean up
     //free(file_content);

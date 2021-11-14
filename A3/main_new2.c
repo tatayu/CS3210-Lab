@@ -234,7 +234,8 @@ int main(int argc, char** argv) {
 
         //TODO: need to change condition or receive a notification from master saying no more file to process?????
         while(1) 
-        {            
+        {   
+            char *file_content = (char*)malloc(MAX);
             //printf("[MAP]receiving files from master...\n");
             MPI_Recv(file_content, MAX, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &Stat);
             //printf("[MAP]received!\n");
@@ -261,7 +262,8 @@ int main(int argc, char** argv) {
             printf("[MAP]sending terminating message to master...\n");
             MPI_Send(&message, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD); 
             
-      	    //break;	    
+      	    //break;
+            free(file_content);	    
         }
 
 

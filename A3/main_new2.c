@@ -317,6 +317,7 @@ int main(int argc, char** argv) {
                     //if(reduce_pair->key == partition_table->pair[k].key)
                     if(strcmp(reduce_pair->key, partition_table->pair[k].key) == 0)
                     {
+                        printf("old: %d", partition_table->pair[k].val);
                         partition_table->pair[k].val += reduce_pair->val;
                         printf("key: %s, add: %d, new: %d\n", reduce_pair->key, reduce_pair->val,  partition_table->pair[k].val);
                         is_duplicate = true;

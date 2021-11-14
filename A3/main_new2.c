@@ -129,10 +129,8 @@ int main(int argc, char** argv) {
         for(int i = 0; i < num_files; i ++)
         {
             //Step 1. Read the files into buffer*******************************************************************************************
-	    char *filepath = (char *)malloc(100*sizeof(char));
-	    memcpy(filepath, input_files_dir, strlen(input_files_dir)+1);
-            printf("%s\n", filepath);
-	    char *slash = "/";
+            char *filepath = input_files_dir;
+            char *slash = "/";
             char *txt = ".txt";
             strcat(filepath, slash);
 
@@ -154,8 +152,8 @@ int main(int argc, char** argv) {
 
             rewind(fp);
             fread((void*)file_content, 1, size, fp);
-	        printf("file sent: %s \n", file_content);
-	        printf("get file\n");	
+	        //printf("file sent: %s \n", file_content);
+	        //printf("get file\n");	
 
             //Step 2. (map) send the data to the map worker******************************************************************
             if(i < num_map_workers)
@@ -233,11 +231,11 @@ int main(int argc, char** argv) {
         //TODO: need to change condition or receive a notification from master saying no more file to process?????
         while(1) 
         {            
-            printf("[MAP]receiving files from master...\n");
+            //printf("[MAP]receiving files from master...\n");
             MPI_Recv(file_content, MAX, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &Stat);
-            printf("[MAP]received!\n");
-	         printf("[MAP]file content %s \n", &file_content[0] );
-	        if(file_content[0] == '$')
+            //printf("[MAP]received!\n");
+	        //printf("[MAP]file content %s \n", &file_content[0] );
+	        if(file_content[0] = '$')
             {
                break;
             }
@@ -246,12 +244,12 @@ int main(int argc, char** argv) {
             for(int i = 0; i < output->len; i ++)
             {	
 		    	
-		        printf("[MAP]calculating partition...\n");
+		        //printf("[MAP]calculating partition...\n");
                 int p = partition(output->kvs[i].key, num_reduce_workers);        
-		        printf("[MAP]partition value: %d\n", p);
+		        //printf("[MAP]partition value: %d\n", p);
 		        memcpy(part[p]->pair[part[p]->len].key, output->kvs[i].key, sizeof(part[p]->pair[part[p]->len].key));
 		        part[p]->pair[part[p]->len].val = output->kvs[i].val;
-                printf("[MAP]part p pair key-value: %s %d\n", part[p]->pair[part[p]->len].key, part[p]->pair[part[p]->len].val);
+                //printf("[MAP]part p pair key-value: %s %d\n", part[p]->pair[part[p]->len].key, part[p]->pair[part[p]->len].val);
 		        part[p]->len += 1;
             } 
             
@@ -276,9 +274,9 @@ int main(int argc, char** argv) {
             
             for(int j = 0; j < part[i - 1]->len; j ++)
             {
-                printf("[MAP]sending pair...\n");
+                //printf("[MAP]sending pair...\n");
                 MPI_Send(&part[i - 1]->pair[j], 1, mpi_pairs_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
-                printf("[MAP]pair sent!!!\n");
+                //printf("[MAP]pair sent!!!\n");
             }
 	    }
 
@@ -314,7 +312,8 @@ int main(int argc, char** argv) {
                 //TODO: put into partition table
                 for(int k = 0; k < partition_table->len; k ++)
                 {
-                    if(reduce_pair->key == partition_table->pair[k].key)
+                    //if(reduce_pair->key == partition_table->pair[k].key)
+                    if(strcmp(reduce_pair->key, partition_table->pair[k].key) == 0)
                     {
                         partition_table->pair[k].val += reduce_pair->val;
                         is_duplicate = true;
@@ -341,6 +340,7 @@ int main(int argc, char** argv) {
         MPI_Send(&partition_table->len, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
         printf("[REDUCE]length of pairs sent!!!\n");
         
+        printf("partition_table length: %d\n", partition_table->len);
         for(int i = 0; i < partition_table->len; i ++)
         {
             printf("[REDUCE]sending pairs back to master...\n");

@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
             {
                 printf("[MASTER]Replying back terminating message to map workers...\n");
                 MPI_Send(&terminating_message, 1, MPI_CHAR, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD);
-		working_map_worker -= 1;
+		        working_map_worker -= 1;
             }
             
         }
@@ -204,13 +204,13 @@ int main(int argc, char** argv) {
         {
             int len = 0;
             printf("[MASTER]Receiving length of pairs from reduce workers...\n");
-            MPI_recv(&len, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &Stat);
+            MPI_Recv(&len, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &Stat);
             printf("[MASTER]Length of pairs received!!!\n");
             
             for(int j = 0; j < len; j ++)
             {
                 printf("[MASTER]Receiving pair %d from reduce workers...\n", j);
-                MPI_recv(master_pair, 1, mpi_pairs_type, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD, &Stat);
+                MPI_Recv(master_pair, 1, mpi_pairs_type, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD, &Stat);
                 printf("[MASTER]Received pair %d from reduce workers!!!\n", j);
                 printf("[MASTER]key: %s\n", master_pair->key);
                 printf("[MASTER]val: %d\n", master_pair->val);
@@ -237,7 +237,7 @@ int main(int argc, char** argv) {
 	         printf("[MAP]file content %s \n", &file_content[0] );
 	        if(file_content[0] = '$')
             {
-               //break;
+               break;
             }
             
             output = map(file_content);
@@ -257,7 +257,7 @@ int main(int argc, char** argv) {
             printf("[MAP]sending terminating message to master...\n");
             MPI_Send(&message, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD); 
             
-      	    break;	    
+      	    //break;	    
         }
 
 

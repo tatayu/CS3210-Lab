@@ -50,23 +50,10 @@ int main(int argc, char** argv) {
 
     if(num_files < num_map_workers)
     {
-	num_map_workers = num_files;
+	    num_map_workers = num_files;
     }
 
     //!create a type for stuct keys**********************************************************************/
-    printf("num_map_workers:%d \n", num_map_workers);
-    //type for keys
-    int nitems_keys = 2;
-    int blocklengths0[2] = {8, 1}; 
-
-    MPI_Aint offsets0[2];
-    offsets0[0] = (MPI_Aint) offsetof(keys, key);
-    offsets0[1] = (MPI_Aint) offsetof(keys, val);
-    MPI_Datatype types0[2] = {MPI_CHAR, MPI_INT};
-    MPI_Datatype mpi_keys_type;
-    MPI_Type_create_struct(nitems_keys, blocklengths0, offsets0, types0, &mpi_keys_type);
-    MPI_Type_commit(&mpi_keys_type);
-    
     //type for store pair
     int nitems_storePair = 2;
     int blocklengths1[2] = {8, 1}; //array ???????????????????
@@ -79,17 +66,6 @@ int main(int argc, char** argv) {
     MPI_Type_create_struct(nitems_storePair, blocklengths1, offsets1, types1, &mpi_pairs_type);
     MPI_Type_commit(&mpi_pairs_type);
 
-    //type for store partition
-    int nitems_storePartition = 2;
-    int blocklengths2[2] = {1, 1000};
-    
-    MPI_Aint offsets2[2];
-    offsets2[0] = (MPI_Aint) offsetof(storePartition, len);
-    offsets2[1] = (MPI_Aint) offsetof(storePartition, pair);
-    MPI_Datatype types2[2] = {MPI_INT, mpi_pairs_type};
-    MPI_Datatype mpi_partitions_type;
-    MPI_Type_create_struct(nitems_storePartition, blocklengths2, offsets2, types2, &mpi_partitions_type);
-    MPI_Type_commit(&mpi_partitions_type);
     /*********************************************************************************************************/
 
     // Identify the specific map function to use
@@ -133,7 +109,6 @@ int main(int argc, char** argv) {
        
         for(int i = 0; i < num_files; i ++)
         {
-            //char *file_content = (char*)malloc(MAX);
             memset(file_content, 0, MAX);
             //Step 1. Read the files into buffer*******************************************************************************************
              char *filepath = (char *)malloc(100*sizeof(char));
@@ -183,22 +158,19 @@ int main(int argc, char** argv) {
                     MPI_Send(file_content, strlen(file_content), MPI_CHAR, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD);
                 }
             }
-            //free(file_content);
         }
-
-        
         
         char terminating_message = '$';
         int working_map_worker = num_map_workers;
         printf("num_map_workers: %d\n", num_map_workers);
-	while(working_map_worker > 0)
+	    while(working_map_worker > 0)
         {
-	    printf("working_map_workers: %d\n", working_map_worker);
+	        //printf("working_map_workers: %d\n", working_map_worker);
             char message;
             printf("[MASTER]receiving terminating message from map workers...\n");
             MPI_Recv(&message, 1, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &Stat);
             printf("[MASTER]receive %c\n", message);
-	    if(message == '#')
+	        if(message == '#')
             {
                 printf("[MASTER]Replying back terminating message to map workers...\n");
                 MPI_Send(&terminating_message, 1, MPI_CHAR, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD);
@@ -212,6 +184,7 @@ int main(int argc, char** argv) {
         printf("[MASTER] second barrier\n");
         MPI_Barrier(MPI_COMM_WORLD);
 
+        FILE *result = fopen("result.out", "w");
         for(int i = 0; i < num_reduce_workers; i++)
         {
             int len = 0;
@@ -226,24 +199,21 @@ int main(int argc, char** argv) {
                 printf("[MASTER]Received pair %d from reduce workers!!!\n", j);
                 printf("[MASTER]key: %s\n", master_pair->key);
                 printf("[MASTER]val: %d\n", master_pair->val);
+
+                if(result != NULL)
+                {
+                    fwrite(master_pair, sizeof(struct storePair), 1, result);
+                }
             }
         }
-
-        //!barrier
-        //TODO: write to file
+        fclose(result);
     
-        // FILE *write;
-        // write =fopen("result.output", "w");
-        // fputs(final_result, write);
-        // fclose(write);
-
         printf("Rank (%d): This is the master process\n", rank);
+        
     } else if ((rank >= 1) && (rank <= num_map_workers)) {
-
-        //TODO: need to change condition or receive a notification from master saying no more file to process?????
+        
         while(1) 
         {   
-            //char *file_content = (char*)malloc(MAX);
             memset(file_content, 0, MAX);
             //printf("[MAP]receiving files from master...\n");
             MPI_Recv(file_content, MAX, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &Stat);
@@ -257,8 +227,6 @@ int main(int argc, char** argv) {
             output = map(file_content);
             for(int i = 0; i < output->len; i ++)
             {	
-		    	
-		        //printf("[MAP]calculating partition...\n");
                 int p = partition(output->kvs[i].key, num_reduce_workers);        
 		        //printf("[MAP]partition value: %d\n", p);
 		        memcpy(part[p]->pair[part[p]->len].key, output->kvs[i].key, sizeof(part[p]->pair[part[p]->len].key));
@@ -269,10 +237,7 @@ int main(int argc, char** argv) {
             
             char message = '#';
             printf("[MAP]sending terminating message to master...\n");
-            MPI_Send(&message, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD); 
-            
-      	    //break;
-            //free(file_content);	    
+            MPI_Send(&message, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);     
         }
 
 
@@ -329,7 +294,6 @@ int main(int argc, char** argv) {
                 //TODO: put into partition table
                 for(int k = 0; k < partition_table->len; k ++)
                 {
-                    //if(reduce_pair->key == partition_table->pair[k].key)
                     if(strcmp(reduce_pair->key, partition_table->pair[k].key) == 0)
                     {
                         printf("old: %d", partition_table->pair[k].val);
@@ -354,7 +318,6 @@ int main(int argc, char** argv) {
         //!barrier
         MPI_Barrier(MPI_COMM_WORLD);
         
-        //!TODO: send back to master
         //printf("[REDUCE]sending length of pairs back to master...\n");
         MPI_Send(&partition_table->len, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
         //printf("[REDUCE]length of pairs sent!!!\n");
@@ -369,9 +332,8 @@ int main(int argc, char** argv) {
     }
     else
     {
-	MPI_Barrier(MPI_COMM_WORLD);
-	MPI_Barrier(MPI_COMM_WORLD);
-        //do nothing
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 
         

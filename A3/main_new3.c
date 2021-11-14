@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <time.h>
 
 #define LINUX
 long long wall_clock_time()
@@ -100,8 +101,9 @@ int main(int argc, char** argv) {
     }
 
     //!MALLOC*******************************************************************************************************
-    char *file_content = (char*)malloc(MAX);
-    MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
+    char *file_content = (char *)malloc(MAX);
+    //MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
+    MapTaskOutput *output;
     storePartition *part[num_reduce_workers];
     for(int i = 0; i < num_reduce_workers; i ++)
     {
@@ -110,14 +112,14 @@ int main(int argc, char** argv) {
         part[i]->pair = (storePair *)malloc(1000 * sizeof(storePair));
     }
 
-    storePair *reduce_pair = (storePair *)malloc(1000 * sizeof(storePair));
+    storePair *reduce_pair = (storePair *)malloc(sizeof(storePair));
     reduce_pair->val = 0;
     
     storePartition *partition_table = (storePartition *)malloc(sizeof(storePartition));
     partition_table->pair = (storePair *)malloc(1000 * sizeof(storePair));
     partition_table->len = 0; //number of pairs
 
-    storePair *master_pair = (storePair *)malloc(1000 * sizeof(storePair));
+    storePair *master_pair = (storePair *)malloc(sizeof(storePair));
     master_pair->val = 0;
 
     // Distinguish between master, map workers and reduce workers
@@ -189,12 +191,15 @@ int main(int argc, char** argv) {
             //printf("[MASTER]receive %c\n", message);
 	        if(message == '#')
             {
-                //printf("[MASTER]Replying back terminating message to map workers...\n");
+                printf("[MASTER]Replying back terminating message to map workers...\n");
                 MPI_Send(&terminating_message, 1, MPI_CHAR, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD);
 		        working_map_worker -= 1;
             }
             
         }
+	
+	printf("master barrier\n");
+	MPI_Barrier(MPI_COMM_WORLD);
         FILE *result = fopen("result.out", "w");
         for(int i = 0; i < num_reduce_workers; i++)
         {
@@ -251,9 +256,11 @@ int main(int argc, char** argv) {
             
             char message = '#';
             //printf("[MAP]sending terminating message to master...\n");
-            MPI_Send(&message, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);     
+            MPI_Send(&message, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
         }
-  
+  	
+	printf("map barrier");
+	MPI_Barrier(MPI_COMM_WORLD);
         printf("Rank (%d): This is a map worker process\n", rank);
 
     } 
@@ -296,7 +303,9 @@ int main(int argc, char** argv) {
                 }
             }
         }
-
+	
+	printf("reduce barrier\n");	
+	MPI_Barrier(MPI_COMM_WORLD);
         MPI_Send(&partition_table->len, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
         //printf("[REDUCE] partition_table length: %d\n", partition_table->len);
         for(int i = 0; i < partition_table->len; i ++)
@@ -310,21 +319,22 @@ int main(int argc, char** argv) {
     }
     else
     {
+	MPI_Barrier(MPI_COMM_WORLD);
         //do nothing
         printf("Rank (%d): This is a idle worker process\n", rank);
 
     }
 
     //Clean up
-    free_map_task_output(output);
+    //free_map_task_output(output);
+    //free(output);
     free(file_content);
-    //free(part);
-    free(reduce_pair->key);
+    for(int i = 0; i < num_reduce_workers; i ++)
+    {
+	free(part[i]);	
+    }
     free(reduce_pair);
-    free(partition_table->pair->key);
-    free(partition_table->pair);
     free(partition_table);
-    free(master_pair->key);
     free(master_pair);
     MPI_Finalize();
     //!clock end

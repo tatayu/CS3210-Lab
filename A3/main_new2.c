@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
     }
 
     //!create a type for stuct keys**********************************************************************/
-    printf("1\n");
+    printf("num_map_workers:%d \n", num_map_workers);
     //type for keys
     int nitems_keys = 2;
     int blocklengths0[2] = {8, 1}; 
@@ -369,8 +369,11 @@ int main(int argc, char** argv) {
     }
     else
     {
+	MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Barrier(MPI_COMM_WORLD);
         //do nothing
     }
+
         
     printf("Rank (%d): This is a reduce worker process\n", rank);
 

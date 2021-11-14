@@ -1,4 +1,5 @@
-soctf-pdc-001 slots=1
-soctf-pdc-002 slots=1
-soctf-pdc-003 slots=1
-soctf-pdc-004 slots=1
+rank 0=soctf-pdc-001 slots=0:0
+rank 1=soctf-pdc-002 slots=0:0
+rank 2=soctf-pdc-003 slots=0:0
+rank 3=soctf-pdc-004 slots=0:0
+rank 4=soctf-pdc-004 slots=0:1

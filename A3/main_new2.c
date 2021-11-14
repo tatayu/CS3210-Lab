@@ -301,7 +301,9 @@ int main(int argc, char** argv) {
         
         printf("Rank (%d): This is a map worker process\n", rank);
 
-    } else {
+    } 
+    else if((rank > num_map_workers) && (rank <= num_map_workers + num_reduce_workers))
+    {
         
         //!barrier
         printf("[REDUCE]first barrier!\n");
@@ -364,6 +366,10 @@ int main(int argc, char** argv) {
             MPI_Send(&partition_table->pair[i], 1, mpi_pairs_type, 0, 0, MPI_COMM_WORLD);
             //printf("[REDUCE]pairs sent!!!\n");
         }
+    }
+    else
+    {
+        //do nothing
     }
         
     printf("Rank (%d): This is a reduce worker process\n", rank);

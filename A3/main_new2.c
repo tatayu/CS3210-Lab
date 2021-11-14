@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
     }
 
     //!MALLOC*******************************************************************************************************
-    //char *file_content = (char*)malloc(MAX);
+    char *file_content = (char*)malloc(MAX);
     MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
     storePartition *part[num_reduce_workers];
     for(int i = 0; i < num_reduce_workers; i ++)
@@ -128,7 +128,8 @@ int main(int argc, char** argv) {
        
         for(int i = 0; i < num_files; i ++)
         {
-            char *file_content = (char*)malloc(MAX);
+            //char *file_content = (char*)malloc(MAX);
+            memset(file_content, 0, MAX);
             //Step 1. Read the files into buffer*******************************************************************************************
              char *filepath = (char *)malloc(100*sizeof(char));
 	        memcpy(filepath, input_files_dir, strlen(input_files_dir)+1);
@@ -177,7 +178,7 @@ int main(int argc, char** argv) {
                     MPI_Send(file_content, strlen(file_content), MPI_CHAR, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD);
                 }
             }
-            free(file_content);
+            //free(file_content);
         }
 
         
@@ -235,7 +236,8 @@ int main(int argc, char** argv) {
         //TODO: need to change condition or receive a notification from master saying no more file to process?????
         while(1) 
         {   
-            char *file_content = (char*)malloc(MAX);
+            //char *file_content = (char*)malloc(MAX);
+            memset(file_content, 0, MAX);
             //printf("[MAP]receiving files from master...\n");
             MPI_Recv(file_content, MAX, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &Stat);
             //printf("[MAP]received!\n");
@@ -263,7 +265,7 @@ int main(int argc, char** argv) {
             MPI_Send(&message, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD); 
             
       	    //break;
-            free(file_content);	    
+            //free(file_content);	    
         }
 
 

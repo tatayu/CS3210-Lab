@@ -48,6 +48,11 @@ int main(int argc, char** argv) {
     char *output_file_name = argv[5];
     int map_reduce_task_num = atoi(argv[6]);
 
+    if(num_files < num_map_workers)
+    {
+	num_map_workers = num_files;
+    }
+
     //!create a type for stuct keys**********************************************************************/
     printf("1\n");
     //type for keys
@@ -185,8 +190,10 @@ int main(int argc, char** argv) {
         
         char terminating_message = '$';
         int working_map_worker = num_map_workers;
-        while(working_map_worker > 0)
+        printf("num_map_workers: %d\n", num_map_workers);
+	while(working_map_worker > 0)
         {
+	    printf("working_map_workers: %d\n", working_map_worker);
             char message;
             printf("[MASTER]receiving terminating message from map workers...\n");
             MPI_Recv(&message, 1, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &Stat);

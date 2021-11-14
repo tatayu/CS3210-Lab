@@ -178,6 +178,7 @@ int main(int argc, char** argv) {
             }
             
         }
+        MPI_Barrier(MPI_COMM_WORLD);
         FILE *result = fopen("result.out", "w");
         for(int i = 0; i < num_reduce_workers; i++)
         {
@@ -226,6 +227,7 @@ int main(int argc, char** argv) {
 		        MPI_Send(&output->kvs[i], 1, mpi_pairs_type, num_map_workers + p + 1, num_map_workers + p + 1, MPI_COMM_WORLD);
             }
 
+            printf("[MAP %d] sending terminating message to reduce workers\n", rank);
             for(int i = 1; i <= num_reduce_workers; i++)
             {
                 MPI_Send(reduce_pair, 1, mpi_pairs_type, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
@@ -238,6 +240,7 @@ int main(int argc, char** argv) {
 
 
         //!barrier        
+        MPI_Barrier(MPI_COMM_WORLD);
         printf("Rank (%d): This is a map worker process\n", rank);
 
     } 
@@ -254,7 +257,7 @@ int main(int argc, char** argv) {
             if(reduce_pair->val == -1)
             {
                 number_of_files -= 1;
-                printf("[REDUCE] terminating value with number of files = %d\n",number_of_files);
+                printf("[REDUCE %d] terminating value with number of files = %d\n",rank, number_of_files);
             }
             else
             {
@@ -282,6 +285,7 @@ int main(int argc, char** argv) {
             }
         }
 
+        MPI_Barrier(MPI_COMM_WORLD);
         MPI_Send(&partition_table->len, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
         printf("[REDUCE] partition_table length: %d\n", partition_table->len);
         for(int i = 0; i < partition_table->len; i ++)
@@ -295,6 +299,7 @@ int main(int argc, char** argv) {
     }
     else
     {
+        MPI_Barrier(MPI_COMM_WORLD);
         //do nothing
     }
 

@@ -205,9 +205,9 @@ int main(int argc, char** argv) {
         for(int i = 0; i < num_reduce_workers; i++)
         {
             int len = 0;
-            printf("[MASTER]Receiving length of pairs from reduce workers...\n");
+            //printf("[MASTER]Receiving length of pairs from reduce workers...\n");
             MPI_Recv(&len, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &Stat);
-            printf("[MASTER]Length of pairs received!!!\n");
+            //printf("[MASTER]Length of pairs received!!!\n");
             
             for(int j = 0; j < len; j ++)
             {
@@ -270,9 +270,9 @@ int main(int argc, char** argv) {
         //after collecting the partition from ALL the files processed by this worker, sent each partition to corresponding reduce worker
         for(int i = 1; i <= num_reduce_workers; i++)
         {
-            printf("[MAP]sending length...\n");
+            //printf("[MAP]sending length...\n");
             MPI_Send(&part[i - 1]->len, 1, MPI_INT, num_map_workers + i, num_map_workers + i, MPI_COMM_WORLD);
-            printf("[MAP]length sent!!!\n");
+            //printf("[MAP]length sent!!!\n");
             
             for(int j = 0; j < part[i - 1]->len; j ++)
             {
@@ -297,18 +297,18 @@ int main(int argc, char** argv) {
         for(int i = 0; i < num_map_workers; i ++)
         {   
             int len; //number of pairs
-            printf("[REDUCE]Receiving length...\n");
+            //printf("[REDUCE]Receiving length...\n");
             MPI_Recv(&len, 1, MPI_INT, MPI_ANY_SOURCE, rank, MPI_COMM_WORLD, &Stat);   
-            printf("[REDUCE]Length received!!!\n");
+            //printf("[REDUCE]Length received!!!\n");
             
             
             for(int j = 0; j < len; j ++)
             {
-                printf("[REDUCE]Receiving the pair %d from map worker...\n", j);
+                //printf("[REDUCE]Receiving the pair %d from map worker...\n", j);
                 MPI_Recv(reduce_pair, 1, mpi_pairs_type, Stat.MPI_SOURCE, rank, MPI_COMM_WORLD, &Stat);
-                printf("[REDUCE]received pair %d from map worker!!!\n", j);
-                printf("[REDUCE]key: %s\n", reduce_pair->key);
-                printf("[REDUCE]val: %d\n", reduce_pair->val);
+                //printf("[REDUCE]received pair %d from map worker!!!\n", j);
+                //printf("[REDUCE]key: %s\n", reduce_pair->key);
+                //printf("[REDUCE]val: %d\n", reduce_pair->val);
                 
                 bool is_duplicate = false;
                 //TODO: put into partition table
@@ -318,6 +318,7 @@ int main(int argc, char** argv) {
                     if(strcmp(reduce_pair->key, partition_table->pair[k].key) == 0)
                     {
                         partition_table->pair[k].val += reduce_pair->val;
+                        printf("key: %s, add: %d, new: %d\n", reduce_pair->key, reduce_pair->val,  partition_table->pair[k].val);
                         is_duplicate = true;
                         break;
                     }
@@ -338,16 +339,16 @@ int main(int argc, char** argv) {
         MPI_Barrier(MPI_COMM_WORLD);
         
         //!TODO: send back to master
-        printf("[REDUCE]sending length of pairs back to master...\n");
+        //printf("[REDUCE]sending length of pairs back to master...\n");
         MPI_Send(&partition_table->len, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
-        printf("[REDUCE]length of pairs sent!!!\n");
+        //printf("[REDUCE]length of pairs sent!!!\n");
         
-        printf("partition_table length: %d\n", partition_table->len);
+        printf("[REDUCE] partition_table length: %d\n", partition_table->len);
         for(int i = 0; i < partition_table->len; i ++)
         {
-            printf("[REDUCE]sending pairs back to master...\n");
+            //printf("[REDUCE]sending pairs back to master...\n");
             MPI_Send(&partition_table->pair[i], 1, mpi_pairs_type, 0, 0, MPI_COMM_WORLD);
-            printf("[REDUCE]pairs sent!!!\n");
+            //printf("[REDUCE]pairs sent!!!\n");
         }
     }
         

@@ -91,8 +91,10 @@ int main(int argc, char** argv) {
 
     //!MALLOC*******************************************************************************************************
     char *file_content = (char*)malloc(MAX);
-    //MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
-    MapTaskOutput *output;
+    MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
+    output -> 0;
+    output -> kvs=NULL;
+    //MapTaskOutput *output;
     
     storePartition *part[num_reduce_workers];
     for(int i = 0; i < num_reduce_workers; i ++)
@@ -330,6 +332,7 @@ int main(int argc, char** argv) {
 
 
     //Clean up
+    free_map_task_output(output);
     for(int i = 0; i < num_reduce_workers; i ++)
     {
 	    free(part[i]);	

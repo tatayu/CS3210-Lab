@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
     //!create a type for stuct keys**********************************************************************/
     //type for store pair
     int nitems_storePair = 2;
-    int blocklengths1[2] = {8, 1}; //array ???????????????????
+    int blocklengths1[2] = {8, 1}; 
     
     MPI_Aint offsets1[2];
     offsets1[0] = (MPI_Aint) offsetof(storePair, key);
@@ -157,13 +157,13 @@ int main(int argc, char** argv) {
             else
             {
                 //wait for idle worker then send the rest of the files
-                printf("[MASTER]receiving from any completed worker!\n");
+                //printf("[MASTER]receiving from any completed worker!\n");
                 char message;
                 MPI_Recv(&message, 1, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &Stat);
                 if(message == '#')
                 {
                     //send new file to that worker
-                    printf("[MASTER]sending files to idel map workers...\n");
+                    //printf("[MASTER]sending files to idel map workers...\n");
                     MPI_Send(file_content, strlen(file_content), MPI_CHAR, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD);
                 }
             }
@@ -171,28 +171,25 @@ int main(int argc, char** argv) {
         
         char terminating_message = '$';
         int working_map_worker = num_map_workers;
-        printf("num_map_workers: %d\n", num_map_workers);
+        //printf("num_map_workers: %d\n", num_map_workers);
 	    while(working_map_worker > 0)
         {
 	        //printf("working_map_workers: %d\n", working_map_worker);
             char message;
-            printf("[MASTER]receiving terminating message from map workers...\n");
+            //printf("[MASTER]receiving terminating message from map workers...\n");
             MPI_Recv(&message, 1, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &Stat);
-            printf("[MASTER]receive %c\n", message);
+            //printf("[MASTER]receive %c\n", message);
 	        if(message == '#')
             {
-                printf("[MASTER]Replying back terminating message to map workers...\n");
+                //printf("[MASTER]Replying back terminating message to map workers...\n");
                 MPI_Send(&terminating_message, 1, MPI_CHAR, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD);
 		        working_map_worker -= 1;
             }
             
         }
-        printf("[MASTER] frist barrier\n");
-        MPI_Barrier(MPI_COMM_WORLD);
-        
-        //printf("[MASTER] second barrier\n");
-        //MPI_Barrier(MPI_COMM_WORLD);
 
+        //printf("[MASTER] frist barrier\n");
+        MPI_Barrier(MPI_COMM_WORLD);
         FILE *result = fopen("result.out", "w");
         for(int i = 0; i < num_reduce_workers; i++)
         {
@@ -203,11 +200,11 @@ int main(int argc, char** argv) {
             
             for(int j = 0; j < len; j ++)
             {
-                printf("[MASTER]Receiving pair %d from reduce workers...\n", j);
+                //printf("[MASTER]Receiving pair %d from reduce workers...\n", j);
                 MPI_Recv(master_pair, 1, mpi_pairs_type, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD, &Stat);
-                printf("[MASTER]Received pair %d from reduce workers!!!\n", j);
-                printf("[MASTER]key: %s\n", master_pair->key);
-                printf("[MASTER]val: %d\n", master_pair->val);
+                //printf("[MASTER]Received pair %d from reduce workers!!!\n", j);
+                //printf("[MASTER]key: %s\n", master_pair->key);
+                //printf("[MASTER]val: %d\n", master_pair->val);
 
                 if(result != NULL)
                 {
@@ -245,14 +242,9 @@ int main(int argc, char** argv) {
             } 
             
             char message = '#';
-            printf("[MAP]sending terminating message to master...\n");
+            //printf("[MAP]sending terminating message to master...\n");
             MPI_Send(&message, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);     
         }
-
-
-        //!barrier 
-        //printf("[MAP]first barrier!\n");
-        //MPI_Barrier(MPI_COMM_WORLD);
         
         //after collecting the partition from ALL the files processed by this worker, sent each partition to corresponding reduce worker
         for(int i = 1; i <= num_reduce_workers; i++)
@@ -269,20 +261,13 @@ int main(int argc, char** argv) {
             }
 	    }
 
-        //!barrier
-        printf("[MAP]first barrier!\n");
-        MPI_Barrier(MPI_COMM_WORLD);
-        
+        //printf("[MAP]first barrier!\n");
+        MPI_Barrier(MPI_COMM_WORLD);     
         printf("Rank (%d): This is a map worker process\n", rank);
 
     } 
     else if((rank > num_map_workers) && (rank <= num_map_workers + num_reduce_workers))
     {
-        
-        //!barrier
-        //printf("[REDUCE]first barrier!\n");
-        //MPI_Barrier(MPI_COMM_WORLD);
-        
         for(int i = 0; i < num_map_workers; i ++)
         {   
             int len; //number of pairs
@@ -304,9 +289,9 @@ int main(int argc, char** argv) {
                 {
                     if(strcmp(reduce_pair->key, partition_table->pair[k].key) == 0)
                     {
-                        printf("old: %d", partition_table->pair[k].val);
+                        //printf("old: %d", partition_table->pair[k].val);
                         partition_table->pair[k].val += reduce_pair->val;
-                        printf("key: %s, add: %d, new: %d\n", reduce_pair->key, reduce_pair->val,  partition_table->pair[k].val);
+                        //printf("key: %s, add: %d, new: %d\n", reduce_pair->key, reduce_pair->val,  partition_table->pair[k].val);
                         is_duplicate = true;
                         break;
                     }
@@ -314,7 +299,7 @@ int main(int argc, char** argv) {
 
                 if(is_duplicate == false)
                 {
-                    printf("[REDUCE]adding new keys to the partition table...\n");
+                    //printf("[REDUCE]adding new keys to the partition table...\n");
                     memcpy(partition_table->pair[partition_table->len].key, reduce_pair->key, sizeof(partition_table->pair[partition_table->len].key));
                     partition_table->pair[partition_table->len].val = reduce_pair->val;
                     partition_table->len += 1;         
@@ -322,29 +307,26 @@ int main(int argc, char** argv) {
             }
         }
 
-        printf("[REDUCE]first barrier!\n");
-        //!barrier
-        MPI_Barrier(MPI_COMM_WORLD);
-        
+        //printf("[REDUCE]first barrier!\n");
+        MPI_Barrier(MPI_COMM_WORLD); 
         //printf("[REDUCE]sending length of pairs back to master...\n");
         MPI_Send(&partition_table->len, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
         //printf("[REDUCE]length of pairs sent!!!\n");
         
-        printf("[REDUCE] partition_table length: %d\n", partition_table->len);
+        //printf("[REDUCE] partition_table length: %d\n", partition_table->len);
         for(int i = 0; i < partition_table->len; i ++)
         {
             //printf("[REDUCE]sending pairs back to master...\n");
             MPI_Send(&partition_table->pair[i], 1, mpi_pairs_type, 0, 0, MPI_COMM_WORLD);
             //printf("[REDUCE]pairs sent!!!\n");
         }
+        printf("Rank (%d): This is a reduce worker process\n", rank);
     }
     else
     {
         MPI_Barrier(MPI_COMM_WORLD);
+        printf("Rank (%d): This is a idle worker process\n", rank);
     }
-
-        
-    printf("Rank (%d): This is a reduce worker process\n", rank);
 
 
     //Clean up

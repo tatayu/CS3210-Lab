@@ -91,8 +91,10 @@ int main(int argc, char** argv) {
 
     //!MALLOC*******************************************************************************************************
     char *file_content = (char *)malloc(MAX);
-    //MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
-    MapTaskOutput *output;
+    MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
+    output -> 0;
+    output -> kvs=NULL;
+    //MapTaskOutput *output;
 
     storePair *reduce_pair = (storePair *)malloc(sizeof(storePair));
     reduce_pair->val = 0;
@@ -307,7 +309,7 @@ int main(int argc, char** argv) {
     }
 
     //Clean up
-    //free_map_task_output(output);
+    free_map_task_output(output);
     //free(output);
     free(file_content);
     free(reduce_pair);

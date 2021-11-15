@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <time.h>
 
 #define LINUX
 long long wall_clock_time()
@@ -250,8 +251,8 @@ int main(int argc, char** argv) {
 
 
         //!barrier 
-        printf("[MAP]first barrier!\n");
-        MPI_Barrier(MPI_COMM_WORLD);
+        //printf("[MAP]first barrier!\n");
+        //MPI_Barrier(MPI_COMM_WORLD);
         
         //after collecting the partition from ALL the files processed by this worker, sent each partition to corresponding reduce worker
         for(int i = 1; i <= num_reduce_workers; i++)
@@ -269,8 +270,8 @@ int main(int argc, char** argv) {
 	    }
 
         //!barrier
-        //printf("[MAP]second barrier!\n");
-        //MPI_Barrier(MPI_COMM_WORLD);
+        printf("[MAP]first barrier!\n");
+        MPI_Barrier(MPI_COMM_WORLD);
         
         printf("Rank (%d): This is a map worker process\n", rank);
 

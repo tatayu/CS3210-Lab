@@ -23,17 +23,6 @@ long long wall_clock_time()
 }
 
 int MAX = 20000000; //~20MB
-// typedef struct keypair {
-//     char key[8];
-//     int val;
-// } keys;
-
-// // /*********************************************************************************************************/
-// typedef struct MapkOutput {
-//     int len;                // Length of `kvs` array
-//     KeyValue *kvs;          // Array of KeyValue items
-// } output;
-
 typedef struct _storePair
 {
     char key[8];
@@ -50,8 +39,8 @@ int main(int argc, char** argv) {
     //!CLOCK
     long long before, after;
     before = wall_clock_time();
+    
     MPI_Init(&argc, &argv);
-
     int world_size, rank;
     int dest, source, rc;
     MPI_Status Stat;
@@ -74,7 +63,7 @@ int main(int argc, char** argv) {
     //!create a type for stuct keys**********************************************************************/
     //type for store pair
     int nitems_storePair = 2;
-    int blocklengths1[2] = {8, 1}; //array ???????????????????
+    int blocklengths1[2] = {8, 1}; 
     
     MPI_Aint offsets1[2];
     offsets1[0] = (MPI_Aint) offsetof(storePair, key);
@@ -104,13 +93,6 @@ int main(int argc, char** argv) {
     char *file_content = (char *)malloc(MAX);
     //MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
     MapTaskOutput *output;
-    storePartition *part[num_reduce_workers];
-    for(int i = 0; i < num_reduce_workers; i ++)
-    {
-        part[i] = (storePartition *)malloc(sizeof(storePartition));
-        part[i]->len = 0;
-        part[i]->pair = (storePair *)malloc(1000 * sizeof(storePair));
-    }
 
     storePair *reduce_pair = (storePair *)malloc(sizeof(storePair));
     reduce_pair->val = 0;
@@ -132,7 +114,7 @@ int main(int argc, char** argv) {
             //Step 1. Read the files into buffer*******************************************************************************************
              char *filepath = (char *)malloc(100*sizeof(char));
 	        memcpy(filepath, input_files_dir, strlen(input_files_dir)+1);
-            printf("%s\n", filepath);
+            //printf("%s\n", filepath);
             char *slash = "/";
             char *txt = ".txt";
             strcat(filepath, slash);
@@ -141,7 +123,7 @@ int main(int argc, char** argv) {
             sprintf(num, "%d", i);
             strcat(filepath, num);
             char *filename = strcat(filepath, txt);
-            printf("%s\n", filepath);
+            //printf("%s\n", filepath);
             FILE *fp = fopen(filename, "r");
 
             if(fp == NULL)
@@ -191,15 +173,15 @@ int main(int argc, char** argv) {
             //printf("[MASTER]receive %c\n", message);
 	        if(message == '#')
             {
-                printf("[MASTER]Replying back terminating message to map workers...\n");
+                //printf("[MASTER]Replying back terminating message to map workers...\n");
                 MPI_Send(&terminating_message, 1, MPI_CHAR, Stat.MPI_SOURCE, 0, MPI_COMM_WORLD);
 		        working_map_worker -= 1;
             }
             
         }
 	
-	printf("master barrier\n");
-	MPI_Barrier(MPI_COMM_WORLD);
+	    //printf("master barrier\n");
+	    MPI_Barrier(MPI_COMM_WORLD);
         FILE *result = fopen("result.out", "w");
         for(int i = 0; i < num_reduce_workers; i++)
         {
@@ -259,8 +241,8 @@ int main(int argc, char** argv) {
             MPI_Send(&message, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
         }
   	
-	printf("map barrier");
-	MPI_Barrier(MPI_COMM_WORLD);
+	    //printf("map barrier");
+	    MPI_Barrier(MPI_COMM_WORLD);
         printf("Rank (%d): This is a map worker process\n", rank);
 
     } 
@@ -303,9 +285,8 @@ int main(int argc, char** argv) {
                 }
             }
         }
-	
-	printf("reduce barrier\n");	
-	MPI_Barrier(MPI_COMM_WORLD);
+		
+	    MPI_Barrier(MPI_COMM_WORLD);
         MPI_Send(&partition_table->len, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
         //printf("[REDUCE] partition_table length: %d\n", partition_table->len);
         for(int i = 0; i < partition_table->len; i ++)
@@ -319,7 +300,7 @@ int main(int argc, char** argv) {
     }
     else
     {
-	MPI_Barrier(MPI_COMM_WORLD);
+	    MPI_Barrier(MPI_COMM_WORLD);
         //do nothing
         printf("Rank (%d): This is a idle worker process\n", rank);
 
@@ -329,10 +310,6 @@ int main(int argc, char** argv) {
     //free_map_task_output(output);
     //free(output);
     free(file_content);
-    for(int i = 0; i < num_reduce_workers; i ++)
-    {
-	free(part[i]);	
-    }
     free(reduce_pair);
     free(partition_table);
     free(master_pair);

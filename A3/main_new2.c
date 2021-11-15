@@ -7,18 +7,21 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#define LINUX
+long long wall_clock_time()
+{
+#ifdef LINUX
+    struct timespec tp;
+    clock_gettime(CLOCK_REALTIME, &tp);
+    return (long long)(tp.tv_nsec + (long long)tp.tv_sec * 1000000000ll);
+#else
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (long long)(tv.tv_usec * 1000 + (long long)tv.tv_sec * 1000000000ll);
+#endif
+}
+
 int MAX = 20000000; //~20MB
-typedef struct keypair {
-    char key[8];
-    int val;
-} keys;
-
-// /*********************************************************************************************************/
-typedef struct MapkOutput {
-    int len;                // Length of `kvs` array
-    KeyValue *kvs;          // Array of KeyValue items
-} output;
-
 typedef struct _storePair
 {
     char key[8];
@@ -32,8 +35,11 @@ typedef struct _storePartition
 } storePartition;
 
 int main(int argc, char** argv) {
+    //!CLOCK
+    long long before, after;
+    before = wall_clock_time();
+    
     MPI_Init(&argc, &argv);
-
     int world_size, rank;
     int dest, source, rc;
     MPI_Status Stat;
@@ -84,7 +90,9 @@ int main(int argc, char** argv) {
 
     //!MALLOC*******************************************************************************************************
     char *file_content = (char*)malloc(MAX);
-    MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
+    //MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
+    MapTaskOutput *output;
+    
     storePartition *part[num_reduce_workers];
     for(int i = 0; i < num_reduce_workers; i ++)
     {
@@ -93,14 +101,14 @@ int main(int argc, char** argv) {
         part[i]->pair = (storePair *)malloc(1000 * sizeof(storePair));
     }
 
-    storePair *reduce_pair = (storePair *)malloc(1000 * sizeof(storePair));
+    storePair *reduce_pair = (storePair *)malloc(sizeof(storePair));
     reduce_pair->val = 0;
     
     storePartition *partition_table = (storePartition *)malloc(sizeof(storePartition));
     partition_table->pair = (storePair *)malloc(1000 * sizeof(storePair));
     partition_table->len = 0; //number of pairs
 
-    storePair *master_pair = (storePair *)malloc(1000 * sizeof(storePair));
+    storePair *master_pair = (storePair *)malloc(sizeof(storePair));
     master_pair->val = 0;
 
     // Distinguish between master, map workers and reduce workers
@@ -113,7 +121,7 @@ int main(int argc, char** argv) {
             //Step 1. Read the files into buffer*******************************************************************************************
              char *filepath = (char *)malloc(100*sizeof(char));
 	        memcpy(filepath, input_files_dir, strlen(input_files_dir)+1);
-            printf("%s\n", filepath);
+            //printf("%s\n", filepath);
             char *slash = "/";
             char *txt = ".txt";
             strcat(filepath, slash);
@@ -122,7 +130,7 @@ int main(int argc, char** argv) {
             sprintf(num, "%d", i);
             strcat(filepath, num);
             char *filename = strcat(filepath, txt);
-            printf("%s\n", filepath);
+            //printf("%s\n", filepath);
             FILE *fp = fopen(filename, "r");
 
             if(fp == NULL)
@@ -142,7 +150,7 @@ int main(int argc, char** argv) {
             //Step 2. (map) send the data to the map worker******************************************************************
             if(i < num_map_workers)
             {
-                printf("[MASTER]sending files to map workers...\n");
+                //printf("[MASTER]sending files to map workers...\n");
                 MPI_Send(file_content, strlen(file_content), MPI_CHAR, i + 1, 0, MPI_COMM_WORLD);
             }
             else
@@ -181,8 +189,8 @@ int main(int argc, char** argv) {
         printf("[MASTER] frist barrier\n");
         MPI_Barrier(MPI_COMM_WORLD);
         
-        printf("[MASTER] second barrier\n");
-        MPI_Barrier(MPI_COMM_WORLD);
+        //printf("[MASTER] second barrier\n");
+        //MPI_Barrier(MPI_COMM_WORLD);
 
         FILE *result = fopen("result.out", "w");
         for(int i = 0; i < num_reduce_workers; i++)
@@ -261,8 +269,8 @@ int main(int argc, char** argv) {
 	    }
 
         //!barrier
-        printf("[MAP]second barrier!\n");
-        MPI_Barrier(MPI_COMM_WORLD);
+        //printf("[MAP]second barrier!\n");
+        //MPI_Barrier(MPI_COMM_WORLD);
         
         printf("Rank (%d): This is a map worker process\n", rank);
 
@@ -271,8 +279,8 @@ int main(int argc, char** argv) {
     {
         
         //!barrier
-        printf("[REDUCE]first barrier!\n");
-        MPI_Barrier(MPI_COMM_WORLD);
+        //printf("[REDUCE]first barrier!\n");
+        //MPI_Barrier(MPI_COMM_WORLD);
         
         for(int i = 0; i < num_map_workers; i ++)
         {   
@@ -291,7 +299,6 @@ int main(int argc, char** argv) {
                 //printf("[REDUCE]val: %d\n", reduce_pair->val);
                 
                 bool is_duplicate = false;
-                //TODO: put into partition table
                 for(int k = 0; k < partition_table->len; k ++)
                 {
                     if(strcmp(reduce_pair->key, partition_table->pair[k].key) == 0)
@@ -314,7 +321,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        printf("[REDUCE]second barrier!\n");
+        printf("[REDUCE]first barrier!\n");
         //!barrier
         MPI_Barrier(MPI_COMM_WORLD);
         
@@ -333,7 +340,6 @@ int main(int argc, char** argv) {
     else
     {
         MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Barrier(MPI_COMM_WORLD);
     }
 
         
@@ -341,11 +347,17 @@ int main(int argc, char** argv) {
 
 
     //Clean up
-    //free(file_content);
-    //free(output);
-    //free(part);
-    //free(reduce_pair);
-    //free(partition_table);
+    for(int i = 0; i < num_reduce_workers; i ++)
+    {
+	    free(part[i]);	
+    }
+    free(file_content);
+    free(reduce_pair);
+    free(partition_table);
+    free(master_pair);
     MPI_Finalize();
+    //!clock end
+    after = wall_clock_time();
+    fprintf(stderr, "Operation took %1.2f seconds\n", ((float)(after - before)) / 1000000000);
     return 0;
 }

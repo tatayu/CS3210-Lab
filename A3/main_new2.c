@@ -22,7 +22,7 @@ long long wall_clock_time()
 #endif
 }
 
-int MAX = 20000000; //~20MB
+int MAX = 50000000; //~20MB
 typedef struct _storePair
 {
     char key[8];

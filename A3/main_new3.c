@@ -22,7 +22,7 @@ long long wall_clock_time()
 #endif
 }
 
-int MAX = 20000000; //~20MB
+int MAX = 50000000; //~50MB
 typedef struct _storePair
 {
     char key[8];
@@ -92,8 +92,8 @@ int main(int argc, char** argv) {
     //!MALLOC*******************************************************************************************************
     char *file_content = (char *)malloc(MAX);
     MapTaskOutput *output = (MapTaskOutput *)malloc(sizeof(MapTaskOutput));
-    output -> 0;
-    output -> kvs=NULL;
+   output -> len = 0;
+   output -> kvs = NULL;
     //MapTaskOutput *output;
 
     storePair *reduce_pair = (storePair *)malloc(sizeof(storePair));

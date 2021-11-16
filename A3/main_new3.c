@@ -169,7 +169,7 @@ int main(int argc, char **argv)
         }
 
         MPI_Barrier(MPI_COMM_WORLD);
-        FILE *result = fopen("result.out", "w");
+        FILE *result = fopen(output_file_name, "w");
         for (int i = 0; i < num_reduce_workers; i++)
         {
             int len = 0;
